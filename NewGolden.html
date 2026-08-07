@@ -1,0 +1,2330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NGK — Tanks &amp; Manholes Pricing Tool</title>
+<style>
+  :root{
+    --navy:#1a3c5e;
+    --navy-deep:#12293f;
+    --blue:#1a5276;
+    --green:#1e8449;
+    --paper:#f6f4ee;
+    --panel:#ffffff;
+    --ink:#1c2b36;
+    --ink-soft:#5c6b74;
+    --line:#d8dde1;
+    --accent-bg:#eaf1fb;
+    --danger:#c0392b;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+    --sans: "IBM Plex Sans", -apple-system, "Segoe UI", Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden;}
+  body{
+    font-family:var(--sans);
+    background:
+      linear-gradient(var(--paper),var(--paper)),
+      repeating-linear-gradient(0deg, rgba(26,60,94,0.05) 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(90deg, rgba(26,60,94,0.05) 0 1px, transparent 1px 28px);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- Header ---------- */
+  header.top{
+    background:var(--navy-deep);
+    color:#fff;
+    padding:22px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:14px;
+    border-bottom:3px solid var(--green);
+  }
+  header.top .brand{display:flex;align-items:center;gap:16px;}
+  header.top .mark{
+    width:52px;height:52px;border:2px solid #d6eaf8;border-radius:4px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-weight:700;font-size:15px;letter-spacing:2px;
+    color:#d6eaf8;
+  }
+  header.top h1{margin:0;font-size:20px;letter-spacing:.3px;}
+  header.top .tagline{margin:2px 0 0;font-size:12px;color:#bcd7ea;letter-spacing:.4px;text-transform:uppercase;}
+  header.top .ref{
+    font-family:var(--mono);font-size:13px;color:#d6eaf8;
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);
+    padding:8px 14px;border-radius:4px;text-align:right;
+  }
+  header.top .ref b{color:#fff;}
+  header.top .header-right{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .user-chip{
+    display:flex;align-items:center;gap:8px;font-size:11.5px;color:#d6eaf8;
+  }
+  .user-chip .mini-btn{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.3);color:#fff;}
+
+  /* ---------- Login screen ---------- */
+  #loginScreen{
+    position:fixed;inset:0;z-index:100;
+    background:
+      linear-gradient(135deg, var(--navy-deep), var(--navy)),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 28px);
+    display:flex;align-items:center;justify-content:center;padding:20px;
+  }
+  .login-card{
+    background:#fff;border-radius:10px;padding:36px 32px;max-width:360px;width:100%;
+    box-shadow:0 10px 40px rgba(0,0,0,.35);text-align:center;
+  }
+  .login-mark{
+    width:56px;height:56px;margin:0 auto 14px;border-radius:10px;background:var(--navy);
+    color:#d6eaf8;font-family:var(--mono);font-weight:700;font-size:16px;letter-spacing:2px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .login-card h1{margin:0 0 4px;font-size:18px;color:var(--navy);}
+  .login-sub{margin:0 0 20px;font-size:12.5px;color:var(--ink-soft);}
+  .login-card form{text-align:left;}
+  .login-error{color:var(--danger);font-size:12px;margin:10px 0 0;min-height:14px;}
+  @media (max-width:640px){
+    header.top{padding:16px 16px;gap:10px;}
+    header.top .mark{width:42px;height:42px;font-size:12px;}
+    header.top h1{font-size:16px;}
+    header.top .tagline{font-size:10.5px;}
+    header.top .ref{font-size:11.5px;padding:7px 12px;text-align:left;}
+    header.top .header-right{width:100%;justify-content:space-between;}
+  }
+
+  /* ---------- Layout ---------- */
+  main.layout{
+    display:grid;
+    grid-template-columns: 1fr 420px;
+    gap:20px;
+    max-width:1440px;
+    margin:20px auto 80px;
+    padding:0 20px;
+    align-items:start;
+  }
+  @media (max-width:980px){
+    main.layout{grid-template-columns:1fr;}
+  }
+  @media (max-width:640px){
+    main.layout{padding:0 12px;margin:14px auto 60px;gap:14px;}
+  }
+
+  /* ---------- Start-new-quotation banner ---------- */
+  .quote-status-bar{
+    grid-column: 1 / -1;
+    display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    background:linear-gradient(135deg, var(--navy), var(--blue));
+    border-radius:12px;padding:14px 22px;
+    box-shadow:0 3px 12px rgba(20,40,60,.18);
+  }
+  .quote-status-bar .status-text{
+    margin:0;flex:1;min-width:220px;color:#d6eaf8;font-size:12.5px;line-height:1.5;
+  }
+  .quote-status-bar .pill-btn{
+    flex:none;background:#fff;color:var(--navy);border:none;border-radius:24px;
+    padding:11px 22px;font-weight:700;font-size:13px;cursor:pointer;
+    box-shadow:0 1px 4px rgba(0,0,0,.18);white-space:nowrap;
+  }
+  .quote-status-bar .pill-btn:hover{background:#eef4fa;}
+  @media (max-width:640px){
+    .quote-status-bar{padding:14px 16px;border-radius:10px;}
+    .quote-status-bar .status-text{min-width:100%;order:2;text-align:center;}
+    .quote-status-bar .pill-btn{width:100%;order:1;}
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:6px;
+    box-shadow:0 1px 2px rgba(20,40,60,.04);
+  }
+
+  section.card{margin-bottom:18px;}
+  section.card > .card-head{
+    display:flex;align-items:center;gap:10px;
+    padding:12px 18px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#fbfcfe,#f3f6fa);
+    border-radius:6px 6px 0 0;
+  }
+  section.card > .card-head .idx{
+    font-family:var(--mono);font-size:11px;color:#fff;background:var(--blue);
+    width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    flex:none;
+  }
+  section.card > .card-head h2{margin:0;font-size:14.5px;letter-spacing:.2px;color:var(--navy);}
+  section.card > .card-head .hint{margin-left:auto;font-size:11.5px;color:var(--ink-soft);}
+  .card-body{padding:16px 18px 18px;}
+  @media (max-width:640px){
+    .card-body{padding:14px 14px 16px;}
+    section.card > .card-head{padding:12px 14px;}
+  }
+
+  .grid{display:grid;gap:12px;}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr);}
+  .grid.cols-2{grid-template-columns:repeat(2,1fr);}
+  @media (max-width:640px){ .grid.cols-3, .grid.cols-2{grid-template-columns:1fr;} }
+
+  label.field{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--ink-soft);}
+  label.field span.lab{font-weight:600;color:var(--ink);}
+  label.field small{color:var(--ink-soft);font-weight:400;}
+  input, select, textarea{
+    font-family:var(--sans);
+    font-size:14px;
+    padding:8px 10px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    background:#fff;
+    color:var(--ink);
+    width:100%;
+  }
+  input:focus, select:focus, textarea:focus{
+    outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,82,118,.12);
+  }
+  input[type="number"]{font-family:var(--mono);}
+
+  input[readonly]{background:#f2f4f6;color:var(--ink-soft);cursor:default;}
+  .note-box{
+    background:var(--accent-bg);border:1px dashed #9fc0dd;border-radius:5px;
+    padding:10px 12px;font-size:12px;color:var(--blue);margin-bottom:12px;
+  }
+  .workflow-box{
+    background:#fbf7ee;border:1px dashed #e0c896;border-radius:5px;
+    padding:12px 14px;font-size:12.5px;color:#6b5326;line-height:1.6;margin-bottom:14px;white-space:pre-line;
+  }
+
+  /* extra costs table */
+  table.extra{width:100%;border-collapse:collapse;font-size:13px;}
+  table.extra th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--ink-soft);padding:6px 8px;border-bottom:1px solid var(--line);}
+  table.extra td{padding:5px 8px;border-bottom:1px solid #edf0f2;}
+  table.extra td input{padding:6px 8px;}
+  table.extra .rm{background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;line-height:1;padding:4px;}
+  .add-row-btn{
+    margin-top:10px;background:#fff;border:1px dashed var(--blue);color:var(--blue);
+    padding:7px 14px;border-radius:4px;cursor:pointer;font-size:12.5px;font-weight:600;
+  }
+  .add-row-btn:hover{background:var(--accent-bg);}
+
+  /* ---------- Results sidebar ---------- */
+  aside.results{position:sticky;top:20px;display:flex;flex-direction:column;gap:16px;}
+  .result-head{
+    background:var(--navy);color:#fff;padding:14px 18px;border-radius:6px 6px 0 0;
+    display:flex;justify-content:space-between;align-items:baseline;
+  }
+  .result-head h2{margin:0;font-size:14px;letter-spacing:.3px;}
+  .result-head span{font-family:var(--mono);font-size:12px;color:#bcd7ea;}
+
+  table.costs{width:100%;border-collapse:collapse;font-size:12.5px;}
+  table.costs th{
+    text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;
+    color:var(--ink-soft);padding:8px 10px;border-bottom:1px solid var(--line);
+  }
+  table.costs td{padding:7px 10px;border-bottom:1px solid #f0f2f4;vertical-align:top;}
+  table.costs td.num, table.costs th.num{text-align:right;font-family:var(--mono);}
+  table.costs tr.alt td{background:#fafbfc;}
+  table.costs tr.gross td{background:var(--accent-bg);font-weight:700;}
+  table.costs tr.discount td{color:var(--danger);font-style:italic;}
+  table.costs tr.final td{background:var(--navy);color:#fff;font-weight:700;font-size:13.5px;}
+
+  .summary-block{padding:14px 18px;border-top:1px solid var(--line);}
+  .summary-block .row{display:flex;justify-content:space-between;padding:5px 0;font-size:13px;}
+  .summary-block .row span:first-child{color:var(--ink-soft);}
+  .summary-block .row span:last-child{font-family:var(--mono);font-weight:600;}
+  .summary-block h3{margin:14px 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-soft);}
+
+  .weight-note{padding:14px 18px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-soft);line-height:1.7;}
+  .weight-note b{color:var(--ink);}
+
+  .btn-row{display:flex;flex-wrap:wrap;gap:8px;padding:14px 18px;border-top:1px solid var(--line);}
+  button.action{
+    flex:1 1 auto;min-width:140px;
+    background:var(--blue);color:#fff;border:none;border-radius:4px;
+    padding:10px 12px;font-size:12.5px;font-weight:600;cursor:pointer;letter-spacing:.2px;
+  }
+  button.action.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue);}
+  button.action.green{background:var(--green);}
+  button.action:hover{filter:brightness(1.08);}
+  button.action:disabled{opacity:.5;cursor:not-allowed;filter:none;}
+
+  .toast{
+    position:fixed;bottom:22px;right:22px;background:var(--navy-deep);color:#fff;
+    padding:12px 18px;border-radius:5px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.25);
+    opacity:0;transform:translateY(8px);transition:all .25s ease;pointer-events:none;z-index:50;
+    max-width:320px;
+  }
+  .toast.show{opacity:1;transform:translateY(0);}
+  .toast.err{background:#7a2a20;}
+
+  /* ---------- Printable report (hidden on screen) ---------- */
+  #report{display:none;}
+
+  @page{
+    size: A4 landscape;
+    margin: 10mm 9mm;
+  }
+  @media print{
+    html, body{
+      background:#fff;
+      width:279mm; /* A4 landscape usable width (297mm - 2*9mm margin) */
+      margin:0; padding:0;
+    }
+    header.top, nav.pagenav, main.layout, #page-quotes, #page-workorders, #page-users, #loginScreen, .toast, .no-print{display:none !important;}
+    #report{
+      display:block;
+      width:100%;
+      font-size:9.5pt;
+    }
+    #report *{ -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #report table{ page-break-inside:auto; }
+    #report tr{ page-break-inside:avoid; page-break-after:auto; }
+    #report thead{ display:table-header-group; }
+    #report .banner{ page-break-after:avoid; }
+    #report table.spec{ page-break-inside:avoid; }
+  }
+
+  /* ---------- Page nav ---------- */
+  nav.pagenav{
+    display:flex;gap:0;background:var(--navy);border-bottom:1px solid rgba(255,255,255,.1);
+    padding:0 28px;overflow-x:auto;
+  }
+  nav.pagenav button{
+    background:none;border:none;color:#bcd7ea;padding:12px 20px;font-size:13px;font-weight:600;
+    cursor:pointer;letter-spacing:.2px;border-bottom:3px solid transparent;white-space:nowrap;flex:none;
+  }
+  nav.pagenav button.active{color:#fff;border-bottom-color:var(--green);}
+  nav.pagenav button:hover{color:#fff;}
+  @media (max-width:640px){
+    nav.pagenav{padding:0 12px;}
+    nav.pagenav button{padding:11px 14px;font-size:12px;}
+  }
+
+  /* ---------- Quotations page ---------- */
+  .quotes-page{max-width:1280px;margin:24px auto 80px;padding:0 20px;}
+  .quotes-toolbar{
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+    padding:16px 18px;border-bottom:1px solid var(--line);
+  }
+  .quotes-toolbar input[type="search"]{max-width:320px;}
+  .quotes-toolbar .spacer{flex:1;}
+  table.quotes-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+  table.quotes-tbl thead th{
+    text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--ink-soft);
+    padding:10px 14px;border-bottom:1px solid var(--line);background:#fafbfc;
+  }
+  table.quotes-tbl td{padding:10px 14px;border-bottom:1px solid #f0f2f4;vertical-align:middle;}
+  table.quotes-tbl tr:hover td{background:#f7fafc;}
+  table.quotes-tbl td.num{font-family:var(--mono);text-align:right;}
+  table.quotes-tbl .ref-cell{font-family:var(--mono);font-weight:600;color:var(--navy);}
+  table.quotes-tbl .actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;align-items:center;}
+  .mini-btn{
+    background:#fff;border:1px solid var(--line);color:var(--ink);
+    padding:5px 10px;border-radius:4px;cursor:pointer;font-size:11.5px;font-weight:600;
+  }
+  .mini-btn.load{border-color:var(--blue);color:var(--blue);}
+  .mini-btn.del{border-color:var(--danger);color:var(--danger);}
+  .mini-btn.print{border-color:var(--ink-soft);color:var(--ink);}
+  .mini-btn.wo{border-color:var(--green);color:var(--green);}
+  .mini-btn.finish{border-color:var(--green);color:var(--green);white-space:nowrap;}
+  .finish-date{font-family:var(--mono);font-size:12px;color:var(--green);font-weight:600;white-space:nowrap;}
+  .mini-btn:hover{filter:brightness(0.97);background:#f4f6f8;}
+  .quotes-empty{padding:40px 18px;text-align:center;color:var(--ink-soft);font-size:13.5px;}
+
+  /* ---------- Work Orders page ---------- */
+  .wo-form{padding:18px;border-bottom:1px solid var(--line);}
+  .wo-form h3{margin:0 0 12px;font-size:14.5px;color:var(--navy);}
+  .wo-toolbar-top{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:16px 18px;border-bottom:1px solid var(--line);
+  }
+  .wo-toolbar-top h3{margin:0;font-size:14.5px;color:var(--navy);}
+  table.wo-details{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px;}
+  table.wo-details th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.3px;color:var(--ink-soft);padding:6px 8px;border-bottom:1px solid var(--line);}
+  table.wo-details td{padding:5px 8px;border-bottom:1px solid #edf0f2;vertical-align:top;}
+  table.wo-details td input, table.wo-details td textarea{padding:6px 8px;}
+  table.wo-details td textarea{resize:vertical;min-height:34px;font-family:var(--sans);}
+  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:10.5px;font-weight:700;letter-spacing:.2px;}
+  .badge.open{background:var(--accent-bg);color:var(--blue);}
+  .badge.locked{background:#fde9e7;color:var(--danger);}
+  .locked-note{font-size:11.5px;color:var(--danger);}
+  .wo-subtabs{display:flex;gap:6px;padding:14px 18px 0;}
+  .wo-subtabs .subtab{
+    background:#fff;border:1px solid var(--line);color:var(--ink-soft);
+    padding:7px 16px;border-radius:20px;cursor:pointer;font-size:12.5px;font-weight:600;
+  }
+  .wo-subtabs .subtab.active{background:var(--navy);border-color:var(--navy);color:#fff;}
+  .progress-badge{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  .progress-badge.done{color:var(--green);font-weight:700;}
+
+  /* ---------- Work order accordion list (mobile-friendly) ---------- */
+  .wo-list{padding:14px 18px 20px;display:flex;flex-direction:column;gap:10px;}
+  .wo-card{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;}
+  .wo-card-header{
+    display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;user-select:none;
+  }
+  .wo-card-header:hover{background:#fafbfc;}
+  .wo-card-titles{flex:1;min-width:0;}
+  .wo-card-ref{display:block;font-family:var(--mono);font-weight:700;color:var(--navy);font-size:13.5px;}
+  .wo-card-client{display:block;font-size:12.5px;color:var(--ink-soft);margin-top:2px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .wo-card-meta{text-align:right;flex:none;font-size:11px;color:var(--ink-soft);}
+  .wo-toggle{
+    flex:none;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;
+    font-size:17px;font-weight:700;color:var(--blue);display:flex;align-items:center;justify-content:center;
+    line-height:1;
+  }
+  .wo-card.expanded .wo-toggle{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .wo-card-body{border-top:1px solid var(--line);padding:14px 16px;background:#fbfcfe;}
+  .wo-activity{
+    background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px;margin-bottom:10px;
+  }
+  .wo-activity:last-child{margin-bottom:0;}
+  .wo-activity-desc{font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:8px;}
+  .wo-activity label.field{margin-bottom:8px;}
+  .wo-activity textarea{width:100%;font-family:var(--sans);font-size:13px;padding:8px 10px;min-height:56px;}
+  .wo-activity-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px;}
+  .wo-finished-line{font-family:var(--mono);font-size:12px;color:var(--green);font-weight:600;}
+  .wo-empty-activities{font-size:12.5px;color:var(--ink-soft);text-align:center;padding:10px 0;}
+  .wo-card-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:4px;flex-wrap:wrap;}
+  @media (max-width:560px){
+    .wo-card-header{flex-wrap:wrap;}
+    .wo-card-meta{width:100%;text-align:left;order:3;}
+  }
+
+  /* ---------- Quotations list (mobile-friendly cards) ---------- */
+  .quotes-list{
+    display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+    gap:12px;padding:16px 18px;
+  }
+  .quote-card{border:1px solid var(--line);border-radius:8px;padding:14px 16px;background:#fff;}
+  .quote-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .quote-card-ref{display:block;font-family:var(--mono);font-weight:700;color:var(--navy);font-size:13.5px;}
+  .quote-card-client{display:block;font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+  .quote-card-rows{font-size:12.5px;color:var(--ink);display:flex;flex-direction:column;gap:5px;margin:10px 0;}
+  .quote-card-row{display:flex;justify-content:space-between;gap:10px;}
+  .quote-card-row span:first-child{color:var(--ink-soft);flex:none;}
+  .quote-card-row span:last-child{text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .quote-card-price{font-family:var(--mono);font-weight:700;color:var(--navy);}
+  .quote-card-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+  @media (max-width:480px){
+    .quotes-list{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN SCREEN ================= -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-mark">NGK</div>
+    <h1>New Golden Key</h1>
+    <p class="login-sub">Sign in to the pricing tool</p>
+    <form id="loginForm">
+      <label class="field"><span class="lab">Email</span><input type="email" id="loginEmail" autocomplete="username" required></label>
+      <label class="field" style="margin-top:10px;"><span class="lab">Password</span><input type="password" id="loginPassword" autocomplete="current-password" required></label>
+      <button class="action" type="submit" id="btnLogin" style="width:100%;margin-top:16px;">Sign In</button>
+      <p id="loginError" class="login-error"></p>
+    </form>
+  </div>
+</div>
+
+<!-- ================= APP (hidden until signed in) ================= -->
+<div id="appRoot" style="display:none;">
+
+<header class="top">
+  <div class="brand">
+    <div class="mark">NGK</div>
+    <div>
+      <h1>NEW GOLDEN KEY</h1>
+      <p class="tagline">Trading, Contracting &amp; Services — Tanks &amp; Manholes Pricing Tool</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="ref">
+      Quotation Ref: <b id="refDisplay">Q1/ht/01/2026</b><br>
+      Revision <b id="revDisplay">00</b>
+    </div>
+    <div class="user-chip">
+      <span id="userChipText">—</span>
+      <button class="mini-btn" id="btnSignOut" type="button">Sign Out</button>
+    </div>
+  </div>
+</header>
+
+<nav class="pagenav no-print">
+  <button class="tab active" data-page="calc" type="button">Calculator</button>
+  <button class="tab" data-page="quotes" type="button">Quotations</button>
+  <button class="tab" data-page="workorders" type="button">Work Orders</button>
+  <button class="tab" data-page="users" type="button" id="usersTabBtn" style="display:none;">Users</button>
+</nav>
+
+<main class="layout" id="page-calc">
+  <div class="quote-status-bar no-print">
+    <p id="loadedStatus" class="status-text">Not currently editing a saved quotation — this will be a new one.</p>
+    <button class="pill-btn" id="btnNewQuote" type="button">🆕 Start New Quotation</button>
+  </div>
+
+  <!-- ================= LEFT: INPUT FORM ================= -->
+  <div id="app">
+
+    <section class="card panel">
+      <div class="card-head"><span class="idx">1</span><h2>Internal Dimensions</h2></div>
+      <div class="card-body">
+        <div class="grid cols-3">
+          <label class="field"><span class="lab">Length (m)</span><input type="number" id="length" step="0.01" min="0.1" value="13"></label>
+          <label class="field"><span class="lab">Width (m)</span><input type="number" id="width" step="0.01" min="0.1" value="10"></label>
+          <label class="field"><span class="lab">Height (m)</span><input type="number" id="height" step="0.01" min="0.1" value="4"></label>
+        </div>
+        <div class="note-box" style="margin-top:14px;">Separation wall is optional — leave the fields below blank if the tank has none.</div>
+        <div class="grid cols-3">
+          <label class="field"><span class="lab">Sep. Wall Width (m)</span><small>span across tank interior</small><input type="number" id="sepW" step="0.01" min="0"></label>
+          <label class="field"><span class="lab">Sep. Wall Height (m)</span><small>typically = internal height</small><input type="number" id="sepH" step="0.01" min="0"></label>
+          <label class="field"><span class="lab">Sep. Wall Thickness (m)</span><input type="number" id="sepT" step="0.01" min="0"></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card panel">
+      <div class="card-head"><span class="idx">2</span><h2>Thickness &amp; Concrete Pricing</h2></div>
+      <div class="card-body">
+        <div class="grid cols-2">
+          <label class="field"><span class="lab">Foundation Thickness (m)</span><input type="number" id="tFound" step="0.01" min="0.05" value="0.20"></label>
+          <label class="field"><span class="lab">Foundation Concrete Price (QAR/m³)</span><input type="number" id="pFound" step="1" min="0" value="1150"></label>
+          <label class="field"><span class="lab">Wall Thickness (m)</span><input type="number" id="tWall" step="0.01" min="0.05" value="0.15"></label>
+          <label class="field"><span class="lab">Wall Concrete Price (QAR/m³)</span><input type="number" id="pWall" step="1" min="0" value="1150"></label>
+          <label class="field"><span class="lab">Slab Thickness (m)</span><input type="number" id="tSlab" step="0.01" min="0.05" value="0.23"></label>
+          <label class="field"><span class="lab">Slab Concrete Price (QAR/m³)</span><input type="number" id="pSlab" step="1" min="0" value="1150"></label>
+          <label class="field"><span class="lab">Slab Volume Factor</span><input type="number" id="slabFactor" step="0.05" min="0.1" max="2" value="1.0"></label>
+          <label class="field"><span class="lab">Concrete Density — Safety (ton/m³)</span><small>default 2.45 includes safety margin over 2.4</small><input type="number" id="density" step="0.01" min="0.1" value="2.45"></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card panel">
+      <div class="card-head"><span class="idx">3</span><h2>Water Proofing</h2></div>
+      <div class="card-body">
+        <div class="grid cols-2">
+          <label class="field"><span class="lab">Internal Type</span>
+            <select id="wpInternalType"></select>
+          </label>
+          <label class="field"><span class="lab">Internal Unit Price (QAR/m²)</span><input type="number" id="wpInternalPrice" step="0.5" min="0" value="15"></label>
+          <label class="field"><span class="lab">External Type</span>
+            <select id="wpExternalType"></select>
+          </label>
+          <label class="field"><span class="lab">External Unit Price (QAR/m²)</span><input type="number" id="wpExternalPrice" step="0.5" min="0" value="5"></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card panel">
+      <div class="card-head"><span class="idx">4</span><h2>Handling Costs</h2></div>
+      <div class="card-body">
+        <div class="grid cols-2">
+          <label class="field"><span class="lab">Mobile Crane (QAR)</span><input type="number" id="crane" step="10" min="0" value="1500"></label>
+          <label class="field"><span class="lab">Transportation (QAR)</span><input type="number" id="transport" step="10" min="0" value="500"></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card panel">
+      <div class="card-head"><span class="idx">5</span><h2>Additional Costs</h2></div>
+      <div class="card-body">
+        <div style="overflow-x:auto;">
+          <table class="extra" id="extraTable">
+            <thead><tr><th>Description</th><th style="width:140px;">Amount (QAR)</th><th style="width:36px;"></th></tr></thead>
+            <tbody id="extraBody"></tbody>
+          </table>
+        </div>
+        <button class="add-row-btn" id="addExtraRow" type="button">+ Add item</button>
+      </div>
+    </section>
+
+    <section class="card panel">
+      <div class="card-head"><span class="idx">6</span><h2>Pricing</h2></div>
+      <div class="card-body">
+        <label class="field" style="max-width:260px;"><span class="lab">Discount (%)</span><input type="number" id="discount" step="0.5" min="0" max="100" value="5"></label>
+      </div>
+    </section>
+
+    <section class="card panel">
+      <div class="card-head"><span class="idx">7</span><h2>Project Info</h2></div>
+      <div class="card-body">
+        <div class="grid cols-2">
+          <label class="field"><span class="lab">Item Type</span>
+            <select id="itemType">
+              <option value="">— none —</option>
+              <option>Holding Tank</option>
+              <option>Water Tank</option>
+              <option>Pump Manhole</option>
+              <option>Manhole with Sump</option>
+              <option>Pump Room</option>
+            </select>
+          </label>
+          <label class="field"><span class="lab">Client Name</span><input type="text" id="clientName"></label>
+          <label class="field"><span class="lab">Job No.</span><input type="text" id="jobNo"></label>
+          <label class="field"><span class="lab">Job Order</span><input type="text" id="jobOrder"></label>
+          <label class="field"><span class="lab">Location</span><input type="text" id="location"></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card panel">
+      <div class="card-head"><span class="idx">8</span><h2>Comments &amp; Payment</h2></div>
+      <div class="card-body">
+        <label class="field" style="max-width:260px;margin-bottom:12px;"><span class="lab">Payment Method</span>
+          <select id="paymentMethod"></select>
+        </label>
+        <div class="grid cols-2">
+          <label class="field"><span class="lab">Comment Line 1</span><input type="text" id="c1"></label>
+          <label class="field"><span class="lab">Comment Line 2</span><input type="text" id="c2"></label>
+          <label class="field"><span class="lab">Comment Line 3</span><input type="text" id="c3"></label>
+          <label class="field"><span class="lab">Comment Line 4</span><input type="text" id="c4"></label>
+          <label class="field"><span class="lab">Comment Line 5</span><input type="text" id="c5"></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card panel">
+      <div class="card-head"><span class="idx">9</span><h2>Revision &amp; Export</h2></div>
+      <div class="card-body">
+        <div class="workflow-box" id="workflowBox">📋 WORKFLOW:
+• New quotation — fill in the form and click "Save to Firebase". The reference (Q1/ht/mm/yyyy) is generated automatically: the number after "Q" is the next free number for this month, the letters are from the Item Type, and Rev starts at 00.
+• Editing a quotation — open it from the Quotations tab, then change anything here. The reference stays the same, and the revision only advances (Rev 01, Rev 02, …) if something actually changed since it was loaded.
+• Click "Start New Quotation" below to detach from the loaded quotation and begin a fresh one.</div>
+        <div class="grid cols-2">
+          <label class="field"><span class="lab">Revision</span><small>auto — advances only on real edits to a loaded quotation</small><input type="text" id="revisionNo" value="00" readonly></label>
+          <label class="field"><span class="lab">Quote No.</span><small>auto — next free number this month</small><input type="text" id="quoteSeq" value="1" readonly></label>
+        </div>
+        <div class="note-box" style="margin-top:12px;">To reload, edit, or delete a previous quote, open the <b>Quotations</b> tab at the top of the page. Use the <b>Start New Quotation</b> button at the top of this page to detach from a loaded quotation.</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ================= RIGHT: RESULTS ================= -->
+  <aside class="results">
+    <div id="report-wrap" class="panel">
+      <div class="result-head"><h2>Cost Breakdown</h2><span id="refMini">QAR</span></div>
+      <div style="overflow-x:auto;">
+        <table class="costs">
+          <thead><tr><th>Item</th><th class="num">Qty/Area</th><th>Unit</th><th class="num">Unit Px</th><th class="num">Total</th></tr></thead>
+          <tbody id="costBody"></tbody>
+        </table>
+      </div>
+
+      <div class="summary-block">
+        <h3>Tank Water Volume</h3>
+        <div class="row"><span>Volume</span><span id="volM3">—</span></div>
+        <div class="row"><span>Volume</span><span id="volL">—</span></div>
+      </div>
+
+      <div class="weight-note" id="weightNote"></div>
+
+      <div class="btn-row no-print">
+        <button class="action" id="btnPrint" type="button">🖨 Print / Save as PDF</button>
+        <button class="action green" id="btnSaveFb" type="button">☁ Save to Firebase</button>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- ================= PAGE 2: QUOTATIONS ================= -->
+<main class="quotes-page panel no-print" id="page-quotes" style="display:none;">
+  <div class="quotes-toolbar">
+    <input type="search" id="quotesSearch" placeholder="Search by ref, client, or location…">
+    <span class="spacer"></span>
+    <span id="quotesCount" style="font-size:12px;color:var(--ink-soft);"></span>
+    <button class="action secondary" id="btnRefreshQuotes" type="button" style="flex:none;">↻ Refresh</button>
+  </div>
+  <div class="quotes-list" id="quotesList"></div>
+  <div class="quotes-empty" id="quotesEmpty" style="display:none;">No saved quotations yet — save one from the Calculator tab.</div>
+</main>
+
+<!-- ================= PAGE 3: WORK ORDERS ================= -->
+<main class="quotes-page panel no-print" id="page-workorders" style="display:none;">
+  <div class="wo-toolbar-top no-print">
+    <h3>Work Orders</h3>
+    <button class="action secondary" id="btnNewWO" type="button">🆕 New Work Order</button>
+  </div>
+  <div class="wo-form" id="woFormPanel" style="display:none;">
+    <h3 id="woFormTitle">Create Work Order</h3>
+    <div class="grid cols-2">
+      <label class="field"><span class="lab">Date</span><input type="date" id="woDate"></label>
+      <label class="field"><span class="lab">Linked Quotation</span>
+        <select id="woQuoteSelect"><option value="">— select a saved quotation —</option></select>
+      </label>
+    </div>
+    <div class="grid cols-2" style="margin-top:12px;">
+      <label class="field"><span class="lab">Client</span><input type="text" id="woClient" readonly></label>
+      <label class="field"><span class="lab">Quote No.</span><input type="text" id="woQuoteNoDisplay" readonly></label>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="wo-details" id="woDetailsTbl">
+        <thead><tr><th style="width:42%;">Activity Description</th><th style="width:38%;">Work Done</th><th style="width:16%;">Finish Date</th><th></th></tr></thead>
+        <tbody id="woDetailsBody"></tbody>
+      </table>
+    </div>
+    <button class="add-row-btn" id="woAddRow" type="button">+ Add activity</button>
+
+    <div class="btn-row no-print" style="padding:14px 0 0;">
+      <button class="action green" id="btnSaveWO" type="button">💾 Save Work Order</button>
+      <button class="action secondary" id="btnCancelWO" type="button">✕ Cancel</button>
+    </div>
+    <p id="woStatus" style="font-size:11.5px;color:var(--ink-soft);margin:8px 0 0;"></p>
+  </div>
+
+  <div class="wo-subtabs no-print">
+    <button class="subtab active" data-wo-view="pending" type="button">🕒 Pending</button>
+    <button class="subtab" data-wo-view="finished" type="button">✅ Finished</button>
+  </div>
+  <div class="quotes-toolbar">
+    <input type="search" id="woSearch" placeholder="Search by ref or client…">
+    <span class="spacer"></span>
+    <span id="woCount" style="font-size:12px;color:var(--ink-soft);"></span>
+    <button class="action secondary" id="btnRefreshWO" type="button" style="flex:none;">↻ Refresh</button>
+  </div>
+  <div class="wo-list" id="woList"></div>
+  <div class="quotes-empty" id="woEmpty" style="display:none;">No work orders yet — create one above.</div>
+</main>
+
+<!-- ================= PAGE 4: USERS & ROLES (admin only) ================= -->
+<main class="quotes-page panel no-print" id="page-users" style="display:none;">
+  <div class="wo-toolbar-top no-print">
+    <h3>Users &amp; Roles</h3>
+  </div>
+
+  <div class="wo-form">
+    <h3>Add User</h3>
+    <div class="grid cols-3">
+      <label class="field"><span class="lab">Email</span><input type="email" id="newUserEmail"></label>
+      <label class="field"><span class="lab">Temporary Password</span><input type="text" id="newUserPassword" placeholder="min. 6 characters"></label>
+      <label class="field"><span class="lab">Role</span><select id="newUserRole"></select></label>
+    </div>
+    <div class="btn-row no-print" style="padding:12px 0 0;">
+      <button class="action green" id="btnAddUser" type="button">➕ Create User</button>
+    </div>
+    <p id="addUserStatus" style="font-size:11.5px;color:var(--ink-soft);margin:8px 0 0;"></p>
+    <div class="note-box" style="margin-top:10px;">The new user can sign in immediately with this email and password. Ask them to change their password after their first sign-in — this tool has no self-service password reset.</div>
+  </div>
+
+  <div class="wo-form">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;">Roles &amp; Permissions</h3>
+      <button class="action secondary" id="btnAddRole" type="button" style="flex:none;">➕ Add Role</button>
+    </div>
+    <div style="overflow-x:auto;margin-top:12px;">
+      <table class="quotes-tbl" id="rolesTbl">
+        <thead>
+          <tr>
+            <th>Role</th>
+            <th class="num">Calculator</th><th class="num">Quotations</th><th class="num">Work Orders</th><th class="num">Users</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="rolesBody"></tbody>
+      </table>
+    </div>
+    <p style="font-size:11px;color:var(--ink-soft);margin-top:8px;">Each cell has two checkboxes: <b>R</b> (can open/view the page) and <b>E</b> (can create, save, or delete on that page). Changes save automatically.</p>
+  </div>
+
+  <div class="wo-toolbar-top no-print" style="border-bottom:none;">
+    <h3>Users</h3>
+    <button class="action secondary" id="btnRefreshUsers" type="button">↻ Refresh</button>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="quotes-tbl">
+      <thead><tr><th>Email</th><th>Role</th><th>Added</th><th></th></tr></thead>
+      <tbody id="usersBody"></tbody>
+    </table>
+  </div>
+  <div class="quotes-empty" id="usersEmpty" style="display:none;"></div>
+</main>
+
+</div><!-- /#appRoot -->
+
+<div class="toast" id="toast"></div>
+
+<!-- ================= PRINTABLE REPORT ================= -->
+<div id="report"></div>
+
+<!-- Firebase (compat SDK) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAxCRgiEU8PvfTs2KOZHysjH-Vz8F1DSMA",
+  authDomain: "new-golden-7060f.firebaseapp.com",
+  projectId: "new-golden-7060f",
+  storageBucket: "new-golden-7060f.firebasestorage.app",
+  messagingSenderId: "593854553213",
+  appId: "1:593854553213:web:9c86bbd2e5212a3f1da514"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const QUOTES_COLLECTION = "quotes";
+const WORK_ORDERS_COLLECTION = "work_orders";
+const USERS_COLLECTION = "users";
+const ROLES_COLLECTION = "roles";
+const PAGE_KEYS = ["calculator", "quotations", "workorders", "users"];
+const PAGE_LABELS = {calculator:"Calculator", quotations:"Quotations", workorders:"Work Orders", users:"Users"};
+const WATERPROOFING_OPTIONS = ["Bituminous","Membrane Rolls 4mm + Protection Board","Cementation","Epoxy","Crystalline","PVC Membrane","Other"];
+const PAYMENT_OPTIONS = ["Cash","Bank Transfer","Cheque","Installments"];
+
+// ================= AUTH + ROLES/PERMISSIONS =================
+const DEFAULT_ROLES = {
+  admin:   {name:"Admin",   permissions:{calculator:{read:true,edit:true},  quotations:{read:true,edit:true},  workorders:{read:true,edit:true},  users:{read:true,edit:true}}},
+  manager: {name:"Manager", permissions:{calculator:{read:true,edit:true},  quotations:{read:true,edit:true},  workorders:{read:true,edit:true},  users:{read:false,edit:false}}},
+  viewer:  {name:"Viewer",  permissions:{calculator:{read:true,edit:false}, quotations:{read:true,edit:false}, workorders:{read:true,edit:false}, users:{read:false,edit:false}}},
+};
+function emptyPermissions(){
+  const p = {};
+  PAGE_KEYS.forEach(k=> p[k] = {read:false, edit:false});
+  return p;
+}
+
+let currentUser = null;
+let currentUserRole = null;
+let currentPermissions = null;
+let quotationsCanEdit = true;
+let workOrdersCanEdit = true;
+let rolesCache = [];
+let usersCache = [];
+
+auth.onAuthStateChanged(async (user)=>{
+  if(!user){
+    currentUser = null; currentUserRole = null; currentPermissions = null;
+    $("appRoot").style.display = "none";
+    $("loginScreen").style.display = "flex";
+    return;
+  }
+  currentUser = user;
+  try{
+    await loadUserPermissions(user);
+    $("loginScreen").style.display = "none";
+    $("appRoot").style.display = "block";
+    $("userChipText").textContent = `${user.email} · ${currentUserRole || "no role"}`;
+    applyPermissions();
+    initAppAfterAuth();
+  }catch(err){
+    $("loginError").textContent = err.message;
+    auth.signOut();
+  }
+});
+
+async function ensureDefaultRoles(){
+  // Seed the standard roles once, on a completely fresh database. Never
+  // overwrites roles an admin has already customized.
+  const snap = await db.collection(ROLES_COLLECTION).limit(1).get();
+  if(!snap.empty) return;
+  const batch = db.batch();
+  Object.entries(DEFAULT_ROLES).forEach(([id, r])=> batch.set(db.collection(ROLES_COLLECTION).doc(id), r));
+  await batch.commit();
+}
+
+async function loadUserPermissions(user){
+  const userDoc = await db.collection(USERS_COLLECTION).doc(user.uid).get();
+  if(!userDoc.exists){
+    // Bootstrap: if there are no users at all yet, the first person to sign
+    // in becomes Admin automatically so the app is usable out of the box.
+    const anyUsers = await db.collection(USERS_COLLECTION).limit(1).get();
+    if(anyUsers.empty){
+      await ensureDefaultRoles();
+      await db.collection(USERS_COLLECTION).doc(user.uid).set({
+        email: user.email, role: "admin", created_at: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      currentUserRole = "admin";
+    } else {
+      throw new Error("Your account has no assigned role yet. Ask an admin to add you in Users & Roles.");
+    }
+  } else {
+    currentUserRole = userDoc.data().role || null;
+  }
+  await ensureDefaultRoles();
+  const roleDoc = currentUserRole ? await db.collection(ROLES_COLLECTION).doc(currentUserRole).get() : null;
+  currentPermissions = (roleDoc && roleDoc.exists) ? Object.assign(emptyPermissions(), roleDoc.data().permissions) : emptyPermissions();
+}
+
+function applyPermissions(){
+  const p = currentPermissions || emptyPermissions();
+
+  // Nav tabs: hidden entirely without read access.
+  document.querySelector('.tab[data-page="calc"]').style.display = p.calculator.read ? "" : "none";
+  document.querySelector('.tab[data-page="quotes"]').style.display = p.quotations.read ? "" : "none";
+  document.querySelector('.tab[data-page="workorders"]').style.display = p.workorders.read ? "" : "none";
+  $("usersTabBtn").style.display = p.users.read ? "" : "none";
+
+  // Calculator: without edit rights, the whole form goes read-only.
+  if(!p.calculator.edit){
+    document.querySelectorAll("#app input, #app select, #app textarea").forEach(el=>{ el.disabled = true; });
+    $("btnSaveFb").style.display = "none";
+    $("btnNewQuote").style.display = "none";
+  }
+
+  // Quotations / Work Orders: the list renderers themselves check these
+  // flags each time they draw, so re-renders never leak edit controls back in.
+  quotationsCanEdit = !!p.quotations.edit;
+  workOrdersCanEdit = !!p.workorders.edit;
+  if(!workOrdersCanEdit) $("btnNewWO").style.display = "none";
+
+  // Land the person on the first page they're actually allowed to read.
+  if(!p.calculator.read){
+    const order = ["quotations","workorders","users"];
+    const firstAllowed = order.find(k => p[k] && p[k].read);
+    if(firstAllowed){
+      const tabKey = firstAllowed === "quotations" ? "quotes" : firstAllowed;
+      const btn = document.querySelector(`.tab[data-page="${tabKey}"]`);
+      if(btn) btn.click();
+    }
+  }
+}
+
+function initAppAfterAuth(){
+  update();
+  refreshQuoteSeqIfNew();
+}
+
+$("btnSignOut").addEventListener("click", ()=> auth.signOut());
+
+$("loginForm").addEventListener("submit", (e)=>{
+  e.preventDefault();
+  const email = $("loginEmail").value.trim();
+  const password = $("loginPassword").value;
+  $("loginError").textContent = "";
+  const btn = $("btnLogin");
+  btn.disabled = true; btn.textContent = "Signing in…";
+  auth.signInWithEmailAndPassword(email, password)
+    .catch(err=>{ $("loginError").textContent = friendlyAuthError(err); })
+    .finally(()=>{ btn.disabled = false; btn.textContent = "Sign In"; });
+});
+
+function friendlyAuthError(err){
+  const map = {
+    "auth/invalid-email": "That doesn't look like a valid email address.",
+    "auth/user-disabled": "This account has been disabled.",
+    "auth/user-not-found": "No account found with that email.",
+    "auth/wrong-password": "Incorrect password.",
+    "auth/invalid-credential": "Incorrect email or password.",
+    "auth/too-many-requests": "Too many attempts — please wait a moment and try again.",
+  };
+  return map[err.code] || err.message || "Sign-in failed.";
+}
+
+// Creates a new Firebase Auth account via a second, isolated app instance so
+// the admin performing this action stays signed in on the primary session.
+function secondaryAuth(){
+  let secApp;
+  try{ secApp = firebase.app("Secondary"); }
+  catch(e){ secApp = firebase.initializeApp(firebaseConfig, "Secondary"); }
+  return secApp.auth();
+}
+
+const ITEM_TYPE_CODES = {"Holding Tank":"ht","Water Tank":"wt","Pump Manhole":"pm","Manhole with Sump":"mh-s","Pump Room":"pr"};
+const MEMBRANE_DENSITY_TON_M2 = 0.015;
+
+let extraCosts = [{description:"Steel", amount:0}];
+
+function $(id){ return document.getElementById(id); }
+function num(id){ const v = parseFloat($(id).value); return isNaN(v) ? 0 : v; }
+function txt(id){ return ($(id).value || "").trim(); }
+function fmt(v){ return (Math.round((v+Number.EPSILON)*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmt0(v){ return Math.round(v).toLocaleString('en-US'); }
+
+// ---- populate selects ----
+function fillSelect(el, options, selected){
+  el.innerHTML = "";
+  options.forEach(o=>{
+    const opt = document.createElement("option");
+    opt.value = o; opt.textContent = o;
+    if(o === selected) opt.selected = true;
+    el.appendChild(opt);
+  });
+}
+fillSelect($("wpInternalType"), WATERPROOFING_OPTIONS, "Bituminous");
+fillSelect($("wpExternalType"), WATERPROOFING_OPTIONS, "Bituminous");
+fillSelect($("paymentMethod"), PAYMENT_OPTIONS, "Cash");
+
+// ---- extra cost rows ----
+function renderExtraRows(){
+  const body = $("extraBody");
+  body.innerHTML = "";
+  extraCosts.forEach((row, i)=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="text" data-i="${i}" data-f="description" value="${row.description ? row.description.replace(/"/g,'&quot;') : ''}"></td>
+      <td><input type="number" step="1" min="0" data-i="${i}" data-f="amount" value="${row.amount || 0}"></td>
+      <td><button class="rm" data-i="${i}" title="Remove">✕</button></td>`;
+    body.appendChild(tr);
+  });
+  body.querySelectorAll("input").forEach(inp=>{
+    inp.addEventListener("input", e=>{
+      const i = +e.target.dataset.i, f = e.target.dataset.f;
+      extraCosts[i][f] = f === "amount" ? (parseFloat(e.target.value)||0) : e.target.value;
+      update();
+    });
+  });
+  body.querySelectorAll(".rm").forEach(btn=>{
+    btn.addEventListener("click", e=>{
+      extraCosts.splice(+e.target.dataset.i, 1);
+      renderExtraRows(); update();
+    });
+  });
+}
+$("addExtraRow").addEventListener("click", ()=>{
+  extraCosts.push({description:"", amount:0});
+  renderExtraRows(); update();
+});
+renderExtraRows();
+
+// ---- quotation / revision state ----
+// currentQuoteId is set once a saved quotation is loaded (or just saved), and
+// pins the quotation reference so further edits advance the revision instead
+// of minting a brand-new quotation.
+let currentQuoteId = null;
+let loadedQuotationNo = null;
+let loadedRevision = 0;
+let loadedSnapshot = null; // form-state snapshot captured at load/save time
+let loadedQuoteStatus = null; // "Work Order" once linked — blocks further saves
+let isDirty = false;
+
+// Snapshot of every field that defines "the quotation" (excludes the
+// auto-generated ref/revision/quote-no themselves, to avoid feedback loops).
+function serializeFormState(){
+  const vals = [
+    num("length"), num("width"), num("height"),
+    num("sepW"), num("sepH"), num("sepT"),
+    num("tFound"), num("pFound"), num("tWall"), num("pWall"), num("tSlab"), num("pSlab"),
+    num("slabFactor"), num("density"),
+    txt("wpInternalType"), num("wpInternalPrice"), txt("wpExternalType"), num("wpExternalPrice"),
+    num("crane"), num("transport"),
+    JSON.stringify(extraCosts),
+    num("discount"),
+    txt("clientName"), txt("jobNo"), txt("jobOrder"), txt("location"), txt("itemType"),
+    txt("paymentMethod"),
+    txt("c1"), txt("c2"), txt("c3"), txt("c4"), txt("c5")
+  ];
+  return JSON.stringify(vals);
+}
+
+function padRev(n){ return String(Math.max(0, n|0)).padStart(2, "0"); }
+
+function getProjectCode(){
+  const it = txt("itemType");
+  return ITEM_TYPE_CODES[it] || "ht";
+}
+function buildQuotationNo(){
+  const seq = Math.max(1, parseInt($("quoteSeq").value)||1);
+  const code = getProjectCode();
+  const d = new Date();
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const yyyy = d.getFullYear();
+  return `Q${seq}/${code}/${mm}/${yyyy}`;
+}
+// The reference in effect right now: pinned to the loaded quotation while
+// editing one, otherwise freshly generated for a new quotation.
+function currentQuotationNo(){
+  return currentQuoteId ? loadedQuotationNo : buildQuotationNo();
+}
+// The revision in effect right now: while editing a loaded quotation, it
+// only previews the next revision once something has actually changed since
+// it was loaded; otherwise a new quotation starts at 0.
+function currentRevisionNo(){
+  if(currentQuoteId) return isDirty ? loadedRevision + 1 : loadedRevision;
+  return 0;
+}
+
+// ---- core computation (mirrors the Python _compute) ----
+// Pure calculation core — takes a plain inputs object (no DOM access) so it
+// can be reused both for the live Calculator (from form fields) and for
+// printing a stored quotation straight from Firebase without loading it.
+function computeCore(inputs){
+  const L = inputs.length, W = inputs.width, H = inputs.height;
+  const tFound = inputs.foundation, tWall = inputs.wall, tSlab = inputs.slab;
+
+  const outerL = L + 2*tWall;
+  const outerW = W + 2*tWall;
+  const volFoundation = outerL*outerW*tFound;
+  const volWalls = 2*(outerL*tWall*H) + 2*(W*tWall*H);
+
+  const sepW = inputs.sep_wall_width || 0, sepH = inputs.sep_wall_height || 0, sepT = inputs.sep_wall_thickness || 0;
+  const hasSep = sepW>0 && sepH>0 && sepT>0;
+  const volSep = hasSep ? sepW*sepH*sepT : 0;
+
+  const slabFactor = inputs.slab_weight_factor;
+  const volSlabRaw = outerL*outerW*tSlab;
+  const volSlab = volSlabRaw*slabFactor;
+
+  const totalConcreteVol = volFoundation+volWalls+volSlab+volSep;
+  const density = inputs.concrete_density;
+
+  const internalType = inputs.internal_type || "";
+  const externalType = inputs.external_type || "";
+
+  const internalAreaForWeight = (L*W) + 2*(L*H) + 2*(W*H) + (hasSep ? sepW*sepH*2 : 0);
+  const externalAreaForWeight = (outerL*outerW) + 2*(outerL*H) + 2*(outerW*H) + (outerL*outerW);
+  const weightInternalMembrane = internalType.includes("Membrane") ? internalAreaForWeight*MEMBRANE_DENSITY_TON_M2 : 0;
+  const weightExternalMembrane = externalType.includes("Membrane") ? externalAreaForWeight*MEMBRANE_DENSITY_TON_M2 : 0;
+  const weightMembraneTotal = weightInternalMembrane + weightExternalMembrane;
+
+  const weightBody = (volFoundation+volWalls+volSep)*density;
+  const weightSlab = volSlab*density;
+  const totalWeight = weightBody+weightSlab+weightMembraneTotal;
+
+  const volWallsAndFoundation = volWalls+volFoundation;
+  const pFound = inputs.foundation_unit_price, pWall = inputs.wall_unit_price, pSlab = inputs.slab_unit_price;
+  const costFoundation = volFoundation*pFound;
+  const costWalls = volWalls*pWall;
+  const costWallsAndFoundation = costWalls+costFoundation;
+  const costSlab = volSlab*pSlab;
+  const costSepWall = volSep*pWall;
+
+  const internalAreaBase = (L*W) + 2*(L*H) + 2*(W*H);
+  const sepWallWpArea = hasSep ? sepW*sepH*2 : 0;
+  const internalArea = internalAreaBase + sepWallWpArea;
+  const externalArea = (outerL*outerW) + 2*(outerL*H) + 2*(outerW*H) + (outerL*outerW);
+
+  const wpInternalPrice = inputs.internal_unit_price, wpExternalPrice = inputs.external_unit_price;
+  const internalWpCost = internalArea*wpInternalPrice;
+  const externalWpCost = externalArea*wpExternalPrice;
+
+  const craneCost = inputs.mobile_crane, transportCost = inputs.transportation;
+  const extraCostsList = inputs.extra_costs || [];
+  const extraTotal = extraCostsList.reduce((s,r)=>s+(r.amount||0),0);
+
+  const grossPrice = costWallsAndFoundation+costSlab+costSepWall+internalWpCost+externalWpCost+craneCost+transportCost+extraTotal;
+  const discountPct = inputs.discount;
+  const discountAmt = grossPrice*(discountPct/100);
+  const finalPrice = grossPrice-discountAmt;
+
+  const waterVolume = L*W*H;
+
+  return {L,W,H,waterVolume,outerL,outerW,
+    volFoundation,volWalls,volWallsAndFoundation,volSep,hasSep,sepW,sepH,sepT,
+    volSlabRaw,volSlab,totalConcreteVol,totalWeight,weightBody,weightSlab,slabFactor,density,
+    weightMembraneTotal,weightInternalMembrane,weightExternalMembrane,internalType,externalType,
+    pFound,pWall,pSlab,costFoundation,costWalls,costWallsAndFoundation,costSlab,costSepWall,
+    internalArea,sepWallWpArea,externalArea,internalWpCost,externalWpCost,
+    craneCost,transportCost,extraTotal,
+    grossPrice,discountPct,discountAmt,finalPrice,
+    paymentMethod: inputs.payment_method || "",
+    comments: inputs.comments || ["","","","",""],
+    clientName: inputs.client_name || "—", jobNo: inputs.job_no || "—", jobOrder: inputs.job_order || "—",
+    location: inputs.location || "—", itemType: inputs.item_type || "",
+    quotationNo: inputs.quotation_no,
+    revisionNo: inputs.revision_no
+  };
+}
+
+// Gathers the live form into the same shape computeCore() expects.
+function compute(){
+  const inputs = {
+    length: num("length"), width: num("width"), height: num("height"),
+    sep_wall_width: num("sepW"), sep_wall_height: num("sepH"), sep_wall_thickness: num("sepT"),
+    foundation: num("tFound"), foundation_unit_price: num("pFound"),
+    wall: num("tWall"), wall_unit_price: num("pWall"),
+    slab: num("tSlab"), slab_unit_price: num("pSlab"),
+    slab_weight_factor: num("slabFactor"), concrete_density: num("density"),
+    internal_type: txt("wpInternalType"), internal_unit_price: num("wpInternalPrice"),
+    external_type: txt("wpExternalType"), external_unit_price: num("wpExternalPrice"),
+    mobile_crane: num("crane"), transportation: num("transport"),
+    extra_costs: extraCosts,
+    discount: num("discount"),
+    payment_method: txt("paymentMethod"),
+    comments: [txt("c1"),txt("c2"),txt("c3"),txt("c4"),txt("c5")],
+    client_name: txt("clientName")||"—", job_no: txt("jobNo")||"—", job_order: txt("jobOrder")||"—",
+    location: txt("location")||"—", item_type: txt("itemType")||"",
+    quotation_no: currentQuotationNo(),
+    revision_no: currentRevisionNo()
+  };
+  return computeCore(inputs);
+}
+
+// Rebuilds a full computed quote straight from a saved Firestore document —
+// used to print a quotation without loading it into the Calculator.
+function computeFromStoredQuote(data){
+  const inputs = {
+    length: data.length, width: data.width, height: data.height,
+    sep_wall_width: data.sep_wall_width || 0, sep_wall_height: data.sep_wall_height || 0, sep_wall_thickness: data.sep_wall_thickness || 0,
+    foundation: data.foundation, foundation_unit_price: data.foundation_unit_price,
+    wall: data.wall, wall_unit_price: data.wall_unit_price,
+    slab: data.slab, slab_unit_price: data.slab_unit_price,
+    slab_weight_factor: data.slab_weight_factor, concrete_density: data.concrete_density,
+    internal_type: data.internal_type, internal_unit_price: data.internal_unit_price,
+    external_type: data.external_type, external_unit_price: data.external_unit_price,
+    mobile_crane: data.mobile_crane, transportation: data.transportation,
+    extra_costs: data.extra_costs || [],
+    discount: data.discount,
+    payment_method: data.payment_method,
+    comments: [data.comment_1,data.comment_2,data.comment_3,data.comment_4,data.comment_5].map(v=>v||""),
+    client_name: data.client_name || "—", job_no: data.job_no || "—", job_order: data.job_order || "—",
+    location: data.location || "—", item_type: data.item_type || "",
+    quotation_no: data.quotation_no,
+    revision_no: data.revision || 0
+  };
+  return computeCore(inputs);
+}
+
+// ---- render cost breakdown table + summary ----
+function renderCostTable(c){
+  const rows = [];
+  rows.push({label:"Concrete – Foundation", qty:fmt(c.volFoundation), unit:"m³", px:fmt(c.pFound), total:fmt(c.costFoundation)});
+  rows.push({label:"Concrete – Walls", qty:fmt(c.volWalls), unit:"m³", px:fmt(c.pWall), total:fmt(c.costWalls)});
+  if(c.hasSep){
+    rows.push({label:"Concrete – Separation Wall", qty:fmt(c.volSep), unit:"m³", px:fmt(c.pWall), total:fmt(c.costSepWall)});
+  }
+  rows.push({label:"Concrete – Roof Slab", qty:fmt(c.volSlab), unit:"m³", px:fmt(c.pSlab), total:fmt(c.costSlab)});
+  let intLabel = `Internal WP (${c.internalType})`;
+  if(c.sepWallWpArea>0) intLabel += ` incl. sep. wall ×2 (${fmt(c.sepWallWpArea)} m²)`;
+  rows.push({label:intLabel, qty:fmt(c.internalArea), unit:"m²", px:fmt(num("wpInternalPrice")), total:fmt(c.internalWpCost)});
+  rows.push({label:`External WP (${c.externalType})`, qty:fmt(c.externalArea), unit:"m²", px:fmt(num("wpExternalPrice")), total:fmt(c.externalWpCost)});
+  rows.push({label:"Mobile Crane", qty:"1", unit:"lump sum", px:fmt(c.craneCost), total:fmt(c.craneCost)});
+  rows.push({label:"Transportation", qty:"1", unit:"lump sum", px:fmt(c.transportCost), total:fmt(c.transportCost)});
+  extraCosts.forEach(r=>{
+    if((r.amount||0) > 0){
+      rows.push({label:`Additional Cost${r.description ? " ("+r.description+")" : ""}`, qty:"1", unit:"lump sum", px:fmt(r.amount), total:fmt(r.amount)});
+    }
+  });
+
+  const body = $("costBody");
+  body.innerHTML = "";
+  rows.forEach((r,i)=>{
+    const tr = document.createElement("tr");
+    if(i%2===1) tr.classList.add("alt");
+    tr.innerHTML = `<td>${r.label}</td><td class="num">${r.qty}</td><td>${r.unit}</td><td class="num">${r.px}</td><td class="num">${r.total}</td>`;
+    body.appendChild(tr);
+  });
+  const grossTr = document.createElement("tr"); grossTr.className="gross";
+  grossTr.innerHTML = `<td>GROSS TOTAL</td><td></td><td></td><td></td><td class="num">${fmt(c.grossPrice)}</td>`;
+  body.appendChild(grossTr);
+  const discTr = document.createElement("tr"); discTr.className="discount";
+  discTr.innerHTML = `<td>Discount (${fmt(c.discountPct)}%)</td><td></td><td></td><td></td><td class="num">- ${fmt(c.discountAmt)}</td>`;
+  body.appendChild(discTr);
+  const finalTr = document.createElement("tr"); finalTr.className="final";
+  finalTr.innerHTML = `<td>FINAL PRICE</td><td></td><td></td><td></td><td class="num">QAR ${fmt(c.finalPrice)}</td>`;
+  body.appendChild(finalTr);
+
+  $("volM3").textContent = fmt(c.waterVolume) + " m³";
+  $("volL").textContent = fmt0(c.waterVolume*1000) + " L";
+
+  let weightHtml = `<b>Weight note</b> (reference only — not included in pricing):<br>`;
+  weightHtml += `• Tank Body${c.hasSep ? " (walls + foundation + sep. wall)" : " (walls + foundation)"}: <b>${fmt(c.weightBody)} ton</b><br>`;
+  weightHtml += `• Roof Slab: <b>${fmt(c.weightSlab)} ton</b><br>`;
+  if(c.weightMembraneTotal > 0){
+    const parts = [];
+    if(c.weightInternalMembrane>0) parts.push(`Internal: ${fmt(c.weightInternalMembrane)} ton`);
+    if(c.weightExternalMembrane>0) parts.push(`External: ${fmt(c.weightExternalMembrane)} ton`);
+    weightHtml += `• Membrane WP (15 kg/m²): <b>${fmt(c.weightMembraneTotal)} ton</b> <i>(${parts.join(" | ")})</i><br>`;
+  }
+  weightHtml += `• Total Estimated Weight: <b>${fmt(c.totalWeight)} ton</b> (density ${c.density.toFixed(1)} t/m³ — safety value)`;
+  $("weightNote").innerHTML = weightHtml;
+
+  $("refDisplay").textContent = c.quotationNo;
+  $("refMini").textContent = c.quotationNo;
+  $("revDisplay").textContent = padRev(c.revisionNo);
+  $("revisionNo").value = padRev(c.revisionNo);
+
+  const statusEl = $("loadedStatus");
+  const saveBtn = $("btnSaveFb");
+  if(currentQuoteId && loadedQuoteStatus === "Work Order"){
+    statusEl.innerHTML = `<span class="locked-note">🔒 ${loadedQuotationNo} is linked to a work order and is read-only — changes here can't be saved.</span>`;
+    saveBtn.disabled = true;
+  } else if(currentQuoteId){
+    statusEl.textContent = isDirty
+      ? `Editing ${loadedQuotationNo} — saving now will create Rev ${padRev(loadedRevision+1)}.`
+      : `Editing ${loadedQuotationNo} — currently Rev ${padRev(loadedRevision)}. Change anything to advance the revision.`;
+    saveBtn.disabled = false;
+  } else {
+    statusEl.textContent = "Not currently editing a saved quotation — this will be a new one.";
+    saveBtn.disabled = false;
+  }
+}
+
+// ---- printable report ----
+function buildReport(c){
+  const displayedType = c.itemType || "General (All Items)";
+  const userComments = c.comments.filter(l=>l.trim());
+  let costRows = "";
+  const addRow = (label, qty, unit, px, total, cls)=> {
+    costRows += `<tr${cls?` class="${cls}"`:""}><td>${label}</td><td class="r">${qty}</td><td class="c">${unit}</td><td class="r">${px}</td><td class="r">${total}</td></tr>`;
+  };
+  addRow("Concrete – Foundation", fmt(c.volFoundation), "m³", fmt(c.pFound), fmt(c.costFoundation));
+  addRow("Concrete – Walls", fmt(c.volWalls), "m³", fmt(c.pWall), fmt(c.costWalls));
+  if(c.hasSep) addRow("Concrete – Separation Wall", fmt(c.volSep), "m³", fmt(c.pWall), fmt(c.costSepWall));
+  addRow("Concrete – Roof Slab", fmt(c.volSlab), "m³", fmt(c.pSlab), fmt(c.costSlab));
+  let intLabel = `Internal Waterproofing (${c.internalType})`;
+  if(c.sepWallWpArea>0) intLabel += ` incl. Sep. Wall ×2 (${fmt(c.sepWallWpArea)} m²)`;
+  addRow(intLabel, fmt(c.internalArea), "m²", c.internalArea? fmt(c.internalWpCost/c.internalArea):"—", fmt(c.internalWpCost));
+  addRow(`External Waterproofing (${c.externalType})`, fmt(c.externalArea), "m²", c.externalArea? fmt(c.externalWpCost/c.externalArea):"—", fmt(c.externalWpCost));
+  addRow("Mobile Crane", "1", "lump sum", fmt(c.craneCost), fmt(c.craneCost));
+  addRow("Transportation", "1", "lump sum", fmt(c.transportCost), fmt(c.transportCost));
+  extraCosts.forEach(r=>{
+    if((r.amount||0)>0) addRow(`Additional Cost${r.description?" ("+r.description+")":""}`, "1", "lump sum", fmt(r.amount), fmt(r.amount));
+  });
+  addRow("GROSS TOTAL","","","", "QAR "+fmt(c.grossPrice), "gross");
+  addRow(`Discount (${fmt(c.discountPct)}%)`,"","","", "- QAR "+fmt(c.discountAmt), "disc");
+  addRow("FINAL PRICE","","","", "QAR "+fmt(c.finalPrice), "final");
+
+  let weightBlock = `<p class="wnote"><b>Weight Note</b> (for reference only — not included in pricing):</p>`;
+  weightBlock += `<p class="wline">• Tank Body${c.hasSep?" (walls + foundation + sep. wall)":" (walls + foundation)"}: <b>${fmt(c.weightBody)} ton</b>`;
+  if(c.hasSep) weightBlock += ` <i>(sep. wall: ${fmt(c.sepW)} × ${fmt(c.sepH)} × ${fmt(c.sepT)} m = ${(Math.round(c.volSep*1000)/1000)} m³)</i>`;
+  weightBlock += `</p>`;
+  weightBlock += `<p class="wline">• Roof Slab: <b>${fmt(c.weightSlab)} ton</b></p>`;
+  if(c.weightMembraneTotal>0){
+    const parts=[];
+    if(c.weightInternalMembrane>0) parts.push(`Internal (${c.internalType}): ${fmt(c.weightInternalMembrane)} ton`);
+    if(c.weightExternalMembrane>0) parts.push(`External (${c.externalType}): ${fmt(c.weightExternalMembrane)} ton`);
+    weightBlock += `<p class="wline">• Membrane Waterproofing (15 kg/m²): <b>${fmt(c.weightMembraneTotal)} ton</b> <i>(${parts.join(" | ")})</i></p>`;
+  }
+  weightBlock += `<p class="wline">• Total Estimated Weight: <b>${fmt(c.totalWeight)} ton</b> (concrete density ${c.density.toFixed(1)} t/m³ — safety value)</p>`;
+
+  let commentsBlock = "";
+  if(userComments.length){
+    commentsBlock = `<p class="wnote"><b>Comments:</b></p>` + userComments.map((l,i)=>`<p class="wline">${i+1}. ${l}</p>`).join("");
+  }
+
+  $("report").innerHTML = `
+  <style>
+    #report{font-family:var(--sans);color:#1c2b36;padding:0;box-sizing:border-box;}
+    #report table{width:100%;border-collapse:collapse;font-size:8.6pt;margin-top:7px;table-layout:fixed;}
+    #report th{background:#1a3c5e;color:#fff;padding:4px 6px;text-align:left;font-size:7.6pt;text-transform:uppercase;}
+    #report td{padding:3.5px 6px;border-bottom:1px solid #ccc;font-size:8.6pt;word-wrap:break-word;}
+    #report td.r{text-align:right;} #report td.c{text-align:center;}
+    #report tr.gross td{background:#d0e4f7;font-weight:700;}
+    #report tr.disc td{color:#c0392b;font-style:italic;}
+    #report tr.final td{background:#1a3c5e;color:#fff;font-weight:700;}
+    #report .banner{display:flex;justify-content:space-between;align-items:center;border:1.5px solid #1a5276;border-bottom:2px solid #1a5276;padding:7px 12px;}
+    #report .banner .co b{color:#1a5276;font-size:12.5pt;} #report .banner .co div{color:#1e8449;font-size:8pt;}
+    #report .banner .mid b{color:#1e8449;font-size:11pt;letter-spacing:2px;}
+    #report .banner .rt{text-align:right;} #report .banner .rt b{color:#1a5276;font-size:11.5pt;}
+    #report .banner .rt div{color:#1e8449;font-size:7.5pt;}
+    #report .subhead{font-size:8pt;color:#444;margin:6px 0;}
+    #report table.spec{margin-top:4px;}
+    #report table.spec th{font-size:7.2pt;background:#1a3c5e;padding:4px 6px;}
+    #report table.spec td{font-size:8pt;text-align:center;background:#eaf1fb;font-weight:600;padding:4px 6px;}
+    #report .wnote, #report .wline{font-size:7.8pt;color:#444;margin:1.5px 0;}
+    #report table th:first-child, #report table td:first-child{width:34%;}
+  </style>
+  <div class="banner">
+    <div class="co"><b>NEW GOLDEN KEY</b><div>Trading, Contracting &amp; Services</div></div>
+    <div class="mid"><b>N G K</b></div>
+    <div class="rt"><b>Tanks &amp; Manholes Pricing Report</b><div>Ref: ${c.quotationNo} &nbsp;·&nbsp; Rev ${padRev(c.revisionNo)}</div><div>Item Type: ${displayedType}</div></div>
+  </div>
+  <p class="subhead"><b>Client:</b> ${c.clientName} &nbsp; <b>Job No.:</b> ${c.jobNo} &nbsp; <b>Job Order:</b> ${c.jobOrder} &nbsp; <b>Location:</b> ${c.location} &nbsp; <b>Payment:</b> ${c.paymentMethod}</p>
+
+  <table class="spec">
+    <tr><th>Internal L</th><th>Internal W</th><th>Internal H</th><th>Found. Thk.</th><th>Wall Thk.</th><th>Slab Thk.</th></tr>
+    <tr><td>${fmt(c.L)}</td><td>${fmt(c.W)}</td><td>${fmt(c.H)}</td><td>${fmt(num("tFound"))}</td><td>${fmt(num("tWall"))}</td><td>${fmt(num("tSlab"))}</td></tr>
+  </table>
+  <table class="spec">
+    <tr><th>Internal WP Type</th><th>External WP Type</th><th>Water Volume (m³)</th><th>Water Volume (L)</th></tr>
+    <tr><td>${c.internalType}</td><td>${c.externalType}</td><td>${fmt(c.waterVolume)}</td><td>${fmt0(c.waterVolume*1000)}</td></tr>
+  </table>
+
+  <table>
+    <thead><tr><th>Item</th><th>Qty/Area</th><th>Unit</th><th>Unit Price (QAR)</th><th>Total (QAR)</th></tr></thead>
+    <tbody>${costRows}</tbody>
+  </table>
+
+  ${weightBlock}
+  ${commentsBlock}
+  `;
+}
+
+function toast(msg, isErr){
+  const t = $("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (isErr ? " err" : "");
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(()=>{ t.className = "toast"; }, 3200);
+}
+
+function update(){
+  // Determine dirty state by comparing the current form to the snapshot
+  // captured when the loaded quotation was last loaded or saved — this way
+  // only a genuine change advances the revision, never just re-saving as-is.
+  if(currentQuoteId && loadedSnapshot !== null){
+    isDirty = serializeFormState() !== loadedSnapshot;
+  } else {
+    isDirty = false;
+  }
+  const c = compute();
+  renderCostTable(c);
+  buildReport(c);
+}
+
+// wire up live updates
+document.querySelectorAll("#app input, #app select").forEach(el=>{
+  el.addEventListener("input", update);
+  el.addEventListener("change", update);
+});
+
+// ---- print ----
+$("btnPrint").addEventListener("click", ()=>{
+  update();
+  window.print();
+});
+
+// ---- JSON export ----
+// The Firestore document ID for the CURRENT quotation: stable across
+// revisions (pinned once loaded/saved), so re-saving updates the same
+// document instead of creating a new one for every edit.
+function currentDocId(quotationNo){
+  return currentQuoteId || quotationNo.replace(/\//g,"-");
+}
+
+function buildJsonData(c){
+  return {
+    revision: c.revisionNo,
+    quotation_no: c.quotationNo,
+    gross_price: c.grossPrice,
+    final_price: c.finalPrice,
+    length: c.L, width: c.W, height: c.H,
+    sep_wall_width: c.sepW || null, sep_wall_height: c.sepH || null, sep_wall_thickness: c.sepT || null,
+    foundation: num("tFound"), foundation_unit_price: c.pFound,
+    wall: num("tWall"), wall_unit_price: c.pWall,
+    slab: num("tSlab"), slab_unit_price: c.pSlab,
+    slab_weight_factor: c.slabFactor, concrete_density: c.density,
+    internal_type: c.internalType, internal_unit_price: num("wpInternalPrice"),
+    external_type: c.externalType, external_unit_price: num("wpExternalPrice"),
+    mobile_crane: c.craneCost, transportation: c.transportCost,
+    extra_costs: extraCosts,
+    discount: c.discountPct,
+    // Quantities kept alongside the quote so the Work Orders page can
+    // auto-fill activity rows without recomputing the whole quote.
+    vol_foundation: c.volFoundation,
+    vol_walls: c.volWalls,
+    vol_sep_wall: c.volSep,
+    vol_slab: c.volSlab,
+    internal_area: c.internalArea,
+    external_area: c.externalArea,
+    client_name: c.clientName === "—" ? "" : c.clientName,
+    job_no: c.jobNo === "—" ? "" : c.jobNo,
+    job_order: c.jobOrder === "—" ? "" : c.jobOrder,
+    location: c.location === "—" ? "" : c.location,
+    item_type: c.itemType,
+    quote_seq: Math.max(1, parseInt($("quoteSeq").value)||1),
+    quote_month: (c.quotationNo.split("/")[2]) || "",
+    quote_year: (c.quotationNo.split("/")[3]) || "",
+    payment_method: c.paymentMethod,
+    comment_1: c.comments[0], comment_2: c.comments[1], comment_3: c.comments[2], comment_4: c.comments[3], comment_5: c.comments[4],
+    _exported_at: new Date().toISOString()
+  };
+}
+
+$("btnSaveFb").addEventListener("click", async ()=>{
+  const c = compute();
+
+  if(currentQuoteId && loadedQuoteStatus === "Work Order"){
+    toast("This quotation is linked to a work order and can no longer be edited or saved.", true);
+    return;
+  }
+
+  // Required before writing anything to Firebase.
+  const missing = [];
+  if(!txt("clientName")) missing.push("Client Name");
+  if(!txt("itemType")) missing.push("Item Type");
+  if(!(c.finalPrice > 0)) missing.push("a Final Price greater than zero (check your dimensions and prices)");
+  if(missing.length){
+    toast("Before saving, please provide: " + missing.join("; ") + ".", true);
+    return;
+  }
+
+  const data = buildJsonData(c);
+  const docId = currentDocId(c.quotationNo);
+  const label = `${c.quotationNo} — ${c.clientName !== "—" ? c.clientName : "No client"} — Rev${padRev(c.revisionNo)}`;
+  data._doc_id = docId;
+  data._label = label;
+  data._exported_at_ts = firebase.firestore.FieldValue.serverTimestamp();
+  const btn = $("btnSaveFb");
+  btn.disabled = true; btn.textContent = "☁ Saving…";
+  try{
+    await db.collection(QUOTES_COLLECTION).doc(docId).set(data);
+    // Pin state to what was just saved, so the next edit advances the
+    // revision on this same quotation instead of starting a new one.
+    currentQuoteId = docId;
+    loadedQuotationNo = c.quotationNo;
+    loadedRevision = c.revisionNo;
+    loadedSnapshot = serializeFormState();
+    loadedQuoteStatus = null; // saving from the calculator never itself locks a quote
+    isDirty = false;
+    quotesCache = null; // force refresh next time the Quotations tab is opened
+    update();
+    toast(`Saved ${c.quotationNo} — Rev ${padRev(c.revisionNo)}.`);
+  }catch(err){
+    toast("Firebase save failed: " + err.message, true);
+  }finally{
+    btn.disabled = false; btn.textContent = "☁ Save to Firebase";
+  }
+});
+
+$("btnNewQuote").addEventListener("click", ()=>{
+  currentQuoteId = null;
+  loadedQuotationNo = null;
+  loadedRevision = 0;
+  loadedSnapshot = null;
+  loadedQuoteStatus = null;
+  isDirty = false;
+  refreshQuoteSeqIfNew();
+  update();
+  toast("Detached — the next save will create a brand-new quotation.");
+});
+
+// ---- auto Quote No.: next free number for the current calendar month ----
+async function fetchNextQuoteSeq(){
+  const now = new Date();
+  const mm = String(now.getMonth()+1).padStart(2,"0");
+  const yyyy = String(now.getFullYear());
+  try{
+    const snap = await db.collection(QUOTES_COLLECTION).orderBy("quote_seq","desc").limit(300).get();
+    let maxSeq = 0;
+    snap.forEach(doc=>{
+      const d = doc.data();
+      if(String(d.quote_month) === mm && String(d.quote_year) === yyyy){
+        maxSeq = Math.max(maxSeq, Number(d.quote_seq) || 0);
+      }
+    });
+    return maxSeq + 1;
+  }catch(err){
+    return 1;
+  }
+}
+async function refreshQuoteSeqIfNew(){
+  if(currentQuoteId) return; // pinned to a loaded quotation — leave as-is
+  const seq = await fetchNextQuoteSeq();
+  if(!currentQuoteId){ // guard against a load happening while this was in flight
+    $("quoteSeq").value = seq;
+    update();
+  }
+}
+
+function applyLoadedData(data){
+  $("length").value = data.length ?? $("length").value;
+  $("width").value = data.width ?? $("width").value;
+  $("height").value = data.height ?? $("height").value;
+  $("sepW").value = data.sep_wall_width ?? "";
+  $("sepH").value = data.sep_wall_height ?? "";
+  $("sepT").value = data.sep_wall_thickness ?? "";
+  $("tFound").value = data.foundation ?? $("tFound").value;
+  $("pFound").value = data.foundation_unit_price ?? $("pFound").value;
+  $("tWall").value = data.wall ?? $("tWall").value;
+  $("pWall").value = data.wall_unit_price ?? $("pWall").value;
+  $("tSlab").value = data.slab ?? $("tSlab").value;
+  $("pSlab").value = data.slab_unit_price ?? $("pSlab").value;
+  $("slabFactor").value = data.slab_weight_factor ?? $("slabFactor").value;
+  $("density").value = data.concrete_density ?? $("density").value;
+  if(data.internal_type) $("wpInternalType").value = data.internal_type;
+  $("wpInternalPrice").value = data.internal_unit_price ?? $("wpInternalPrice").value;
+  if(data.external_type) $("wpExternalType").value = data.external_type;
+  $("wpExternalPrice").value = data.external_unit_price ?? $("wpExternalPrice").value;
+  $("crane").value = data.mobile_crane ?? $("crane").value;
+  $("transport").value = data.transportation ?? $("transport").value;
+  extraCosts = Array.isArray(data.extra_costs) && data.extra_costs.length ? data.extra_costs : [{description:"Steel", amount:0}];
+  renderExtraRows();
+  $("discount").value = data.discount ?? $("discount").value;
+  $("clientName").value = data.client_name ?? "";
+  $("jobNo").value = data.job_no ?? "";
+  $("jobOrder").value = data.job_order ?? "";
+  $("location").value = data.location ?? "";
+  $("itemType").value = data.item_type ?? "";
+  if(data.payment_method) $("paymentMethod").value = data.payment_method;
+  $("c1").value = data.comment_1 ?? ""; $("c2").value = data.comment_2 ?? "";
+  $("c3").value = data.comment_3 ?? ""; $("c4").value = data.comment_4 ?? "";
+  $("c5").value = data.comment_5 ?? "";
+  $("quoteSeq").value = data.quote_seq ?? 1;
+
+  // Pin to this quotation: same reference and revision stay in effect
+  // until the person edits something (revision then previews +1) or clicks
+  // "Start New Quotation".
+  currentQuoteId = data.id || data._doc_id || null;
+  loadedQuotationNo = data.quotation_no || currentQuoteId;
+  loadedRevision = parseInt(data.revision) || 0;
+  loadedQuoteStatus = data.status || null;
+  loadedSnapshot = serializeFormState();
+  isDirty = false;
+
+  update();
+  if(loadedQuoteStatus === "Work Order"){
+    toast(`Loaded ${loadedQuotationNo} — this quotation is linked to a work order and is read-only.`, true);
+  } else {
+    toast(`Loaded ${loadedQuotationNo} — currently Rev ${padRev(loadedRevision)}. Editing will advance to Rev ${padRev(loadedRevision+1)}.`);
+  }
+}
+
+// ================= PAGE NAVIGATION =================
+const pages = { calc: $("page-calc"), quotes: $("page-quotes"), workorders: $("page-workorders"), users: $("page-users") };
+document.querySelectorAll("nav.pagenav .tab").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll("nav.pagenav .tab").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    const target = btn.dataset.page;
+    Object.entries(pages).forEach(([key, el])=>{ el.style.display = key === target ? (key === "calc" ? "grid" : "block") : "none"; });
+    if(target === "quotes") loadQuotationsPage();
+    if(target === "workorders") loadWorkOrdersPage();
+    if(target === "users") loadUsersPage();
+  });
+});
+
+// ================= QUOTATIONS PAGE =================
+let quotesCache = null;
+
+async function loadQuotationsPage(force){
+  const body = $("quotesList");
+  const empty = $("quotesEmpty");
+  const count = $("quotesCount");
+  if(quotesCache && !force){ renderQuotesTable(quotesCache); return; }
+  count.textContent = "Loading…";
+  body.innerHTML = ""; empty.style.display = "none";
+  try{
+    const snap = await db.collection(QUOTES_COLLECTION).orderBy("_exported_at_ts", "desc").limit(200).get();
+    quotesCache = [];
+    snap.forEach(doc=> quotesCache.push({id:doc.id, ...doc.data()}));
+    renderQuotesTable(quotesCache);
+  }catch(err){
+    count.textContent = "";
+    empty.style.display = "block";
+    empty.textContent = "Could not reach Firebase: " + err.message;
+  }
+}
+
+function renderQuotesTable(list){
+  const listEl = $("quotesList");
+  const empty = $("quotesEmpty");
+  const count = $("quotesCount");
+  const q = ($("quotesSearch").value || "").toLowerCase().trim();
+  const filtered = !q ? list : list.filter(d=>{
+    return [d.quotation_no, d._doc_id, d.client_name, d.location].some(v => (v||"").toString().toLowerCase().includes(q));
+  });
+  listEl.innerHTML = "";
+  count.textContent = `${filtered.length} of ${list.length} quotation(s)`;
+  if(!filtered.length){
+    empty.style.display = "block";
+    empty.textContent = list.length ? "No quotations match your search." : "No saved quotations yet — save one from the Calculator tab.";
+    return;
+  }
+  empty.style.display = "none";
+  filtered.forEach(d=>{
+    let saved = "—";
+    if(d._exported_at_ts && typeof d._exported_at_ts.toDate === "function"){
+      saved = d._exported_at_ts.toDate().toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'});
+    }else if(d._exported_at){
+      saved = new Date(d._exported_at).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'});
+    }
+    const locked = d.status === "Work Order";
+    const statusHtml = locked ? `<span class="badge locked">🔒 Work Order</span>` : `<span class="badge open">Open</span>`;
+    const priceHtml = typeof d.final_price === "number" ? `QAR ${fmt(d.final_price)}` : "—";
+    let actionsHtml = `<button class="mini-btn print" data-id="${d.id}">🖨 Print</button>`;
+    if(locked){
+      actionsHtml += `<span class="locked-note">Linked to a work order</span>`;
+    } else if(quotationsCanEdit){
+      actionsHtml += `
+         <button class="mini-btn load" data-id="${d.id}">Load</button>
+         <button class="mini-btn wo" data-id="${d.id}">➜ Work Order</button>
+         <button class="mini-btn del" data-id="${d.id}">Delete</button>`;
+    }
+
+    const card = document.createElement("div");
+    card.className = "quote-card";
+    card.innerHTML = `
+      <div class="quote-card-header">
+        <div>
+          <span class="quote-card-ref">${d.quotation_no || d.id}</span>
+          <span class="quote-card-client">${d.client_name || "—"}</span>
+        </div>
+        ${statusHtml}
+      </div>
+      <div class="quote-card-rows">
+        <div class="quote-card-row"><span>Location</span><span>${d.location || "—"}</span></div>
+        <div class="quote-card-row"><span>Item Type</span><span>${d.item_type || "—"}</span></div>
+        <div class="quote-card-row"><span>Revision</span><span>${padRev(d.revision || 0)}</span></div>
+        <div class="quote-card-row"><span>Final Price</span><span class="quote-card-price">${priceHtml}</span></div>
+        <div class="quote-card-row"><span>Saved</span><span>${saved}</span></div>
+      </div>
+      <div class="quote-card-actions">${actionsHtml}</div>`;
+    listEl.appendChild(card);
+  });
+  listEl.querySelectorAll(".mini-btn.load").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const item = quotesCache.find(d=>d.id === btn.dataset.id);
+      if(!item) return;
+      if(item.status === "Work Order"){ toast("This quotation is linked to a work order and can no longer be edited.", true); return; }
+      applyLoadedData(item);
+      document.querySelector('nav.pagenav .tab[data-page="calc"]').click();
+      window.scrollTo({top:0, behavior:"smooth"});
+    });
+  });
+  listEl.querySelectorAll(".mini-btn.print").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const item = quotesCache.find(d=>d.id === btn.dataset.id);
+      if(!item) return;
+      printStoredQuote(item);
+    });
+  });
+  listEl.querySelectorAll(".mini-btn.wo").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const item = quotesCache.find(d=>d.id === btn.dataset.id);
+      if(!item) return;
+      startWorkOrderFromQuote(item);
+    });
+  });
+  listEl.querySelectorAll(".mini-btn.del").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const item = quotesCache.find(d=>d.id === btn.dataset.id);
+      if(!item) return;
+      if(item.status === "Work Order"){ toast("This quotation is linked to a work order and can no longer be deleted.", true); return; }
+      if(!confirm(`Delete quotation ${item.quotation_no || item.id}? This cannot be undone.`)) return;
+      try{
+        await db.collection(QUOTES_COLLECTION).doc(item.id).delete();
+        toast("Quotation deleted.");
+        await loadQuotationsPage(true);
+      }catch(err){
+        toast("Delete failed: " + err.message, true);
+      }
+    });
+  });
+}
+
+// Print a saved quotation exactly as stored, without loading it into the
+// Calculator (so nothing about the currently-edited form is disturbed).
+function printStoredQuote(data){
+  const c = computeFromStoredQuote(data);
+  buildReport(c);
+  window.print();
+}
+
+// Jump to the Work Orders tab with a quotation pre-selected and its
+// activities auto-filled, ready to save as a new work order.
+async function startWorkOrderFromQuote(item){
+  resetWoForm();
+  document.querySelectorAll("nav.pagenav .tab").forEach(b=>b.classList.remove("active"));
+  document.querySelector('nav.pagenav .tab[data-page="workorders"]').classList.add("active");
+  Object.entries(pages).forEach(([key, el])=>{ el.style.display = key === "workorders" ? "block" : "none"; });
+
+  await refreshOpenQuotesForLinking();
+  const sel = $("woQuoteSelect");
+  if(![...sel.options].some(o=>o.value === item.id)){
+    const opt = document.createElement("option");
+    opt.value = item.id;
+    opt.textContent = `${item.quotation_no || item.id} — ${item.client_name || "No client"}`;
+    sel.appendChild(opt);
+  }
+  sel.value = item.id;
+  $("woClient").value = item.client_name || "—";
+  $("woQuoteNoDisplay").value = item.quotation_no || item.id;
+  woDetails = buildActivityRowsFromQuote(item);
+  renderWoDetailRows();
+  $("woFormPanel").style.display = "block";
+  loadWorkOrdersPage();
+  window.scrollTo({top:0, behavior:"smooth"});
+  toast(`Ready to create a work order for ${item.quotation_no || item.id}.`);
+}
+
+$("btnRefreshQuotes").addEventListener("click", ()=> loadQuotationsPage(true));
+$("quotesSearch").addEventListener("input", ()=>{ if(quotesCache) renderQuotesTable(quotesCache); });
+
+// ================= WORK ORDERS PAGE =================
+let woCache = null;          // cached list of saved work orders
+let openQuotesCache = null;  // cached list of quotations available to link (status !== "Work Order")
+let woDetails = [{activity:"", work_done:"", finish_date:""}];
+let currentWoId = null;      // set while editing an existing work order
+let currentWoQuote = null;   // {id, quotation_no, client_name} of the linked quotation
+
+function renderWoDetailRows(){
+  const body = $("woDetailsBody");
+  body.innerHTML = "";
+  woDetails.forEach((row, i)=>{
+    const tr = document.createElement("tr");
+    const finishCell = row.finish_date
+      ? `<span class="finish-date">✓ ${row.finish_date}</span>`
+      : `<button class="mini-btn finish" data-i="${i}">Mark Finished</button>`;
+    tr.innerHTML = `
+      <td><textarea rows="2" data-i="${i}" data-f="activity">${row.activity || ""}</textarea></td>
+      <td><textarea rows="2" data-i="${i}" data-f="work_done">${row.work_done || ""}</textarea></td>
+      <td>${finishCell}</td>
+      <td><button class="rm" data-i="${i}" title="Remove">✕</button></td>`;
+    body.appendChild(tr);
+  });
+  body.querySelectorAll("textarea").forEach(inp=>{
+    inp.addEventListener("input", e=>{
+      const i = +e.target.dataset.i, f = e.target.dataset.f;
+      woDetails[i][f] = e.target.value;
+    });
+  });
+  body.querySelectorAll(".mini-btn.finish").forEach(btn=>{
+    btn.addEventListener("click", e=>{
+      const i = +e.target.dataset.i;
+      woDetails[i].finish_date = new Date().toISOString().slice(0,10);
+      renderWoDetailRows();
+    });
+  });
+  body.querySelectorAll(".rm").forEach(btn=>{
+    btn.addEventListener("click", e=>{
+      woDetails.splice(+e.target.dataset.i, 1);
+      if(!woDetails.length) woDetails.push({activity:"", work_done:"", finish_date:""});
+      renderWoDetailRows();
+    });
+  });
+}
+$("woAddRow").addEventListener("click", ()=>{
+  woDetails.push({activity:"", work_done:"", finish_date:""});
+  renderWoDetailRows();
+});
+renderWoDetailRows();
+$("woDate").value = new Date().toISOString().slice(0,10);
+
+// Build the default activity rows from a quotation's concrete + waterproofing
+// quantities — line items with zero quantity are skipped entirely.
+function buildActivityRowsFromQuote(q){
+  const rows = [];
+  const add = (label, qty, unit)=>{
+    if(qty && qty > 0) rows.push({activity: `${label}, ${fmt(qty)} ${unit}`, work_done:"", finish_date:""});
+  };
+  add("Concrete – Foundation", q.vol_foundation, "m³");
+  add("Concrete – Walls", q.vol_walls, "m³");
+  add("Concrete – Separation Wall", q.vol_sep_wall, "m³");
+  add("Concrete – Roof Slab", q.vol_slab, "m³");
+  add(`Internal Waterproofing (${q.internal_type || ""})`, q.internal_area, "m²");
+  add(`External Waterproofing (${q.external_type || ""})`, q.external_area, "m²");
+  return rows.length ? rows : [{activity:"", work_done:"", finish_date:""}];
+}
+
+async function refreshOpenQuotesForLinking(){
+  const sel = $("woQuoteSelect");
+  const keepValue = sel.value;
+  try{
+    const snap = await db.collection(QUOTES_COLLECTION).orderBy("_exported_at_ts", "desc").limit(300).get();
+    openQuotesCache = [];
+    snap.forEach(doc=>{
+      const d = doc.data();
+      if(d.status !== "Work Order") openQuotesCache.push({id: doc.id, ...d});
+    });
+    sel.innerHTML = '<option value="">— select a saved quotation —</option>';
+    // While editing an existing WO, keep its linked quotation selectable even
+    // though it is now locked (it belongs to this work order).
+    if(currentWoQuote && !openQuotesCache.some(q=>q.id === currentWoQuote.id)){
+      openQuotesCache.push(currentWoQuote);
+    }
+    openQuotesCache.forEach(q=>{
+      const opt = document.createElement("option");
+      opt.value = q.id;
+      opt.textContent = `${q.quotation_no || q.id} — ${q.client_name || "No client"}`;
+      sel.appendChild(opt);
+    });
+    if(keepValue) sel.value = keepValue;
+  }catch(err){
+    toast("Could not load quotations: " + err.message, true);
+  }
+}
+
+$("woQuoteSelect").addEventListener("change", ()=>{
+  const id = $("woQuoteSelect").value;
+  const q = (openQuotesCache || []).find(x=>x.id === id);
+  if(q){
+    $("woClient").value = q.client_name || "—";
+    $("woQuoteNoDisplay").value = q.quotation_no || q.id;
+    // Only auto-fill activities for a brand-new work order — never overwrite
+    // progress already recorded while editing an existing one (the select is
+    // disabled in that case anyway).
+    if(!currentWoId){
+      woDetails = buildActivityRowsFromQuote(q);
+      renderWoDetailRows();
+    }
+  } else {
+    $("woClient").value = "";
+    $("woQuoteNoDisplay").value = "";
+  }
+});
+
+function resetWoForm(){
+  currentWoId = null;
+  currentWoQuote = null;
+  woDetails = [{activity:"", work_done:"", finish_date:""}];
+  renderWoDetailRows();
+  $("woDate").value = new Date().toISOString().slice(0,10);
+  $("woQuoteSelect").disabled = false;
+  $("woQuoteSelect").value = "";
+  $("woClient").value = "";
+  $("woQuoteNoDisplay").value = "";
+  $("woFormTitle").textContent = "Create Work Order";
+  $("btnSaveWO").textContent = "💾 Save Work Order";
+  $("woStatus").textContent = "";
+  refreshOpenQuotesForLinking();
+}
+
+$("btnNewWO").addEventListener("click", ()=>{
+  resetWoForm();
+  $("woFormPanel").style.display = "block";
+  window.scrollTo({top:0, behavior:"smooth"});
+});
+
+$("btnCancelWO").addEventListener("click", ()=>{
+  $("woFormPanel").style.display = "none";
+});
+
+$("btnSaveWO").addEventListener("click", async ()=>{
+  const quoteId = $("woQuoteSelect").value;
+  const filledDetails = woDetails
+    .map(r=>({activity:(r.activity||"").trim(), work_done:(r.work_done||"").trim(), finish_date:r.finish_date||""}))
+    .filter(r=>r.activity || r.work_done || r.finish_date);
+
+  const missing = [];
+  if(!quoteId) missing.push("a linked Quotation");
+  if(!filledDetails.length) missing.push("at least one activity in the details table");
+  if(missing.length){
+    toast("Before saving, please provide: " + missing.join("; ") + ".", true);
+    return;
+  }
+
+  const q = (openQuotesCache || []).find(x=>x.id === quoteId) || currentWoQuote;
+  const btn = $("btnSaveWO");
+  btn.disabled = true; btn.textContent = "💾 Saving…";
+  try{
+    const docRef = currentWoId ? db.collection(WORK_ORDERS_COLLECTION).doc(currentWoId) : db.collection(WORK_ORDERS_COLLECTION).doc();
+    const data = {
+      wo_date: $("woDate").value || new Date().toISOString().slice(0,10),
+      quote_doc_id: quoteId,
+      quote_no: q ? (q.quotation_no || quoteId) : quoteId,
+      client_name: q ? (q.client_name || "") : "",
+      details: filledDetails,
+      _updated_at_ts: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    const wasNew = !currentWoId;
+    if(wasNew) data._created_at_ts = firebase.firestore.FieldValue.serverTimestamp();
+    await docRef.set(data, {merge:true});
+
+    // Lock the linked quotation so it can no longer be edited or deleted.
+    await db.collection(QUOTES_COLLECTION).doc(quoteId).update({status: "Work Order"});
+    quotesCache = null; // Quotations tab should reflect the lock next time it's opened
+
+    toast(wasNew ? "Work order created." : "Work order saved.");
+    woCache = null;
+    // Hide the form again once the save completes — reopen it via
+    // "New Work Order" or "Full Edit" when there's more to do.
+    $("woFormPanel").style.display = "none";
+    await loadWorkOrdersPage(true);
+  }catch(err){
+    toast("Save failed: " + err.message, true);
+  }finally{
+    btn.disabled = false;
+  }
+});
+
+function isWoFinished(item){
+  const details = item.details || [];
+  return details.length > 0 && details.every(d => !!d.finish_date);
+}
+
+let woViewMode = "pending";
+document.querySelectorAll(".wo-subtabs .subtab").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".wo-subtabs .subtab").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    woViewMode = btn.dataset.woView;
+    expandedWoId = null;
+    if(woCache) renderWoTable(woCache);
+  });
+});
+
+async function loadWorkOrdersPage(force){
+  const list = $("woList");
+  const empty = $("woEmpty");
+  const count = $("woCount");
+  if(!openQuotesCache) await refreshOpenQuotesForLinking();
+  if(woCache && !force){ renderWoTable(woCache); return; }
+  count.textContent = "Loading…";
+  list.innerHTML = ""; empty.style.display = "none";
+  try{
+    const snap = await db.collection(WORK_ORDERS_COLLECTION).orderBy("_created_at_ts", "desc").limit(200).get();
+    woCache = [];
+    snap.forEach(doc=> woCache.push({id: doc.id, ...doc.data()}));
+    renderWoTable(woCache);
+  }catch(err){
+    count.textContent = "";
+    empty.style.display = "block";
+    empty.textContent = "Could not reach Firebase: " + err.message;
+  }
+}
+
+// Only one work order card is expanded at a time — opening another closes
+// whichever was open, and finishing/reopening the last activity in a card
+// makes it leave the current tab, so the accordion auto-collapses.
+let expandedWoId = null;
+
+// Writes the full details array back to Firestore and updates the local
+// cache in place, so the UI reflects the change immediately.
+async function persistWoDetails(item, newDetails){
+  try{
+    await db.collection(WORK_ORDERS_COLLECTION).doc(item.id).update({
+      details: newDetails,
+      _updated_at_ts: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    item.details = newDetails;
+    return true;
+  }catch(err){
+    toast("Update failed: " + err.message, true);
+    return false;
+  }
+}
+
+async function markActivityFinished(item, idx){
+  const newDetails = item.details.map((d,i)=> i===idx ? {...d, finish_date: new Date().toISOString().slice(0,10)} : d);
+  if(await persistWoDetails(item, newDetails)){
+    toast("Activity marked finished.");
+    if(isWoFinished(item)) expandedWoId = null; // whole order just left the Pending tab
+    renderWoTable(woCache);
+  }
+}
+
+async function unfinishActivity(item, idx){
+  const newDetails = item.details.map((d,i)=> i===idx ? {...d, finish_date: ""} : d);
+  if(await persistWoDetails(item, newDetails)){
+    toast("Activity reopened.");
+    expandedWoId = null; // order just left the Finished tab
+    renderWoTable(woCache);
+  }
+}
+
+async function saveWorkDoneText(item, idx, text){
+  const newDetails = item.details.map((d,i)=> i===idx ? {...d, work_done:text} : d);
+  await persistWoDetails(item, newDetails);
+}
+
+function renderWoTable(list){
+  const listEl = $("woList");
+  const empty = $("woEmpty");
+  const count = $("woCount");
+  const q = ($("woSearch").value || "").toLowerCase().trim();
+  const byView = list.filter(d => isWoFinished(d) === (woViewMode === "finished"));
+  const filtered = !q ? byView : byView.filter(d=>[d.quote_no, d.client_name].some(v=>(v||"").toString().toLowerCase().includes(q)));
+  listEl.innerHTML = "";
+  const viewLabel = woViewMode === "finished" ? "finished" : "pending";
+  count.textContent = `${filtered.length} of ${byView.length} ${viewLabel} work order(s)`;
+  if(!filtered.length){
+    empty.style.display = "block";
+    empty.textContent = q
+      ? "No work orders match your search."
+      : (woViewMode === "finished" ? "No finished work orders yet." : "No pending work orders — create one above.");
+    return;
+  }
+  empty.style.display = "none";
+
+  filtered.forEach(item=>{
+    const details = item.details || [];
+    const doneCount = details.filter(x=>x.finish_date).length;
+    const finished = isWoFinished(item);
+    const expanded = expandedWoId === item.id;
+
+    const card = document.createElement("div");
+    card.className = "wo-card" + (expanded ? " expanded" : "");
+
+    const header = document.createElement("div");
+    header.className = "wo-card-header";
+    header.innerHTML = `
+      <div class="wo-card-titles">
+        <span class="wo-card-ref">${item.quote_no || "—"}</span>
+        <span class="wo-card-client">${item.client_name || "—"}</span>
+      </div>
+      <div class="wo-card-meta">
+        ${item.wo_date || "—"}<br>
+        <span class="progress-badge${finished ? " done" : ""}">${doneCount}/${details.length} done</span>
+      </div>
+      <div class="wo-toggle">${expanded ? "−" : "+"}</div>`;
+    header.addEventListener("click", ()=>{
+      expandedWoId = expanded ? null : item.id;
+      renderWoTable(woCache);
+    });
+    card.appendChild(header);
+
+    if(expanded){
+      const body = document.createElement("div");
+      body.className = "wo-card-body";
+
+      // In the Pending tab, show only unfinished activities to act on; in
+      // the Finished tab, show only finished ones with an Unfinish option.
+      const relevant = details
+        .map((d, idx)=>({d, idx}))
+        .filter(({d}) => woViewMode === "finished" ? !!d.finish_date : !d.finish_date);
+
+      if(!relevant.length){
+        body.innerHTML = `<div class="wo-empty-activities">${woViewMode === "finished" ? "No finished activities." : "No pending activities."}</div>`;
+      } else {
+        relevant.forEach(({d, idx})=>{
+          const act = document.createElement("div");
+          act.className = "wo-activity";
+          if(woViewMode === "finished"){
+            act.innerHTML = `
+              <div class="wo-activity-desc">${d.activity || "—"}</div>
+              ${d.work_done ? `<div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;">${d.work_done}</div>` : ""}
+              <div class="wo-activity-footer">
+                <span class="wo-finished-line">✓ Finished ${d.finish_date}</span>
+                ${workOrdersCanEdit ? `<button class="mini-btn" data-unfinish="${idx}">↺ Unfinish</button>` : ""}
+              </div>`;
+            if(workOrdersCanEdit) act.querySelector("[data-unfinish]").addEventListener("click", ()=> unfinishActivity(item, idx));
+          } else if(workOrdersCanEdit){
+            act.innerHTML = `
+              <div class="wo-activity-desc">${d.activity || "—"}</div>
+              <label class="field"><span class="lab" style="font-size:11px;">Work Done</span>
+                <textarea rows="2" placeholder="Record what was done…">${d.work_done || ""}</textarea>
+              </label>
+              <div class="wo-activity-footer">
+                <span></span>
+                <button class="mini-btn finish" data-finish="${idx}">✓ Mark Finished</button>
+              </div>`;
+            const ta = act.querySelector("textarea");
+            ta.addEventListener("blur", ()=> saveWorkDoneText(item, idx, ta.value));
+            act.querySelector("[data-finish]").addEventListener("click", ()=> markActivityFinished(item, idx));
+          } else {
+            act.innerHTML = `
+              <div class="wo-activity-desc">${d.activity || "—"}</div>
+              ${d.work_done ? `<div style="font-size:12.5px;color:var(--ink-soft);">${d.work_done}</div>` : `<div style="font-size:12.5px;color:var(--ink-soft);font-style:italic;">No progress recorded yet.</div>`}`;
+          }
+          body.appendChild(act);
+        });
+      }
+
+      if(workOrdersCanEdit){
+        const footer = document.createElement("div");
+        footer.className = "wo-card-footer";
+        footer.innerHTML = `
+          <button class="mini-btn load" data-id="${item.id}">✏️ Full Edit</button>
+          <button class="mini-btn del" data-id="${item.id}">🗑 Delete Order</button>`;
+        footer.querySelector(".mini-btn.load").addEventListener("click", ()=>{
+        currentWoId = item.id;
+        currentWoQuote = {id: item.quote_doc_id, quotation_no: item.quote_no, client_name: item.client_name};
+        woDetails = item.details && item.details.length ? item.details.map(r=>({...r})) : [{activity:"", work_done:"", finish_date:""}];
+        renderWoDetailRows();
+        $("woDate").value = item.wo_date || new Date().toISOString().slice(0,10);
+        refreshOpenQuotesForLinking().then(()=>{
+          $("woQuoteSelect").value = item.quote_doc_id;
+          $("woQuoteSelect").disabled = true;
+        });
+        $("woClient").value = item.client_name || "";
+        $("woQuoteNoDisplay").value = item.quote_no || "";
+        $("woFormTitle").textContent = "Editing Work Order";
+        $("btnSaveWO").textContent = "💾 Update Work Order";
+        $("woStatus").textContent = `Linked quotation ${item.quote_no} is locked and can't be edited or deleted.`;
+        $("woFormPanel").style.display = "block";
+        window.scrollTo({top:0, behavior:"smooth"});
+      });
+      footer.querySelector(".mini-btn.del").addEventListener("click", async ()=>{
+        if(!confirm(`Delete work order for ${item.quote_no}? This will also unlock its quotation for editing.`)) return;
+        try{
+          await db.collection(WORK_ORDERS_COLLECTION).doc(item.id).delete();
+          if(item.quote_doc_id){
+            await db.collection(QUOTES_COLLECTION).doc(item.quote_doc_id).update({status: firebase.firestore.FieldValue.delete()}).catch(()=>{});
+          }
+          quotesCache = null;
+          expandedWoId = null;
+          toast("Work order deleted — quotation unlocked.");
+          if(currentWoId === item.id) resetWoForm();
+          await loadWorkOrdersPage(true);
+        }catch(err){
+          toast("Delete failed: " + err.message, true);
+        }
+      });
+        body.appendChild(footer);
+      }
+
+      card.appendChild(body);
+    }
+
+    listEl.appendChild(card);
+  });
+}
+
+$("btnRefreshWO").addEventListener("click", ()=> loadWorkOrdersPage(true));
+$("woSearch").addEventListener("input", ()=>{ if(woCache) renderWoTable(woCache); });
+
+// ================= USERS & ROLES PAGE (admin only) =================
+async function loadUsersPage(){
+  const rolesSnap = await db.collection(ROLES_COLLECTION).get().catch(err=>{ toast("Could not load roles: " + err.message, true); return null; });
+  rolesCache = rolesSnap ? rolesSnap.docs.map(d=>({id:d.id, ...d.data()})) : [];
+
+  const usersSnap = await db.collection(USERS_COLLECTION).orderBy("created_at", "desc").limit(200).get().catch(err=>{ toast("Could not load users: " + err.message, true); return null; });
+  usersCache = usersSnap ? usersSnap.docs.map(d=>({id:d.id, ...d.data()})) : [];
+
+  renderRolesTable();
+  renderUsersTable();
+  fillRoleSelect($("newUserRole"));
+}
+
+function fillRoleSelect(sel, selected){
+  sel.innerHTML = "";
+  rolesCache.forEach(r=>{
+    const opt = document.createElement("option");
+    opt.value = r.id;
+    opt.textContent = r.name || r.id;
+    if(r.id === selected) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function renderRolesTable(){
+  const body = $("rolesBody");
+  body.innerHTML = "";
+  rolesCache.forEach(role=>{
+    const perms = Object.assign(emptyPermissions(), role.permissions);
+    const usedByCount = usersCache.filter(u=>u.role === role.id).length;
+    const tr = document.createElement("tr");
+    const cell = (pageKey)=>{
+      const p = perms[pageKey] || {read:false, edit:false};
+      return `<td class="num">
+        <label style="margin-right:8px;"><input type="checkbox" data-role="${role.id}" data-page="${pageKey}" data-field="read" ${p.read?"checked":""}> R</label>
+        <label><input type="checkbox" data-role="${role.id}" data-page="${pageKey}" data-field="edit" ${p.edit?"checked":""}> E</label>
+      </td>`;
+    };
+    tr.innerHTML = `
+      <td class="ref-cell">${role.name || role.id}</td>
+      ${cell("calculator")}${cell("quotations")}${cell("workorders")}${cell("users")}
+      <td>${role.id === "admin" || usedByCount > 0 ? `<span style="font-size:11px;color:var(--ink-soft);">${usedByCount} user(s)</span>` : `<button class="mini-btn del" data-role-del="${role.id}">Delete</button>`}</td>`;
+    body.appendChild(tr);
+  });
+  body.querySelectorAll("input[type=checkbox]").forEach(cb=>{
+    cb.addEventListener("change", async ()=>{
+      const roleId = cb.dataset.role, pageKey = cb.dataset.page, field = cb.dataset.field;
+      try{
+        await db.collection(ROLES_COLLECTION).doc(roleId).update({[`permissions.${pageKey}.${field}`]: cb.checked});
+        const role = rolesCache.find(r=>r.id === roleId);
+        if(role){ role.permissions = role.permissions || {}; role.permissions[pageKey] = role.permissions[pageKey] || {}; role.permissions[pageKey][field] = cb.checked; }
+        toast(`Updated ${role ? (role.name||roleId) : roleId} permissions.`);
+        // If the signed-in admin just edited their own role, re-apply immediately.
+        if(roleId === currentUserRole){
+          currentPermissions = Object.assign(emptyPermissions(), role.permissions);
+          applyPermissions();
+        }
+      }catch(err){
+        cb.checked = !cb.checked;
+        toast("Update failed: " + err.message, true);
+      }
+    });
+  });
+  body.querySelectorAll("[data-role-del]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const roleId = btn.dataset.roleDel;
+      if(!confirm(`Delete the "${roleId}" role? This cannot be undone.`)) return;
+      try{
+        await db.collection(ROLES_COLLECTION).doc(roleId).delete();
+        toast("Role deleted.");
+        await loadUsersPage();
+      }catch(err){
+        toast("Delete failed: " + err.message, true);
+      }
+    });
+  });
+}
+
+$("btnAddRole").addEventListener("click", async ()=>{
+  const name = prompt("New role name (e.g. Estimator):");
+  if(!name) return;
+  const id = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  if(!id){ toast("Please enter a valid role name.", true); return; }
+  try{
+    await db.collection(ROLES_COLLECTION).doc(id).set({name: name.trim(), permissions: emptyPermissions()});
+    toast(`Role "${name.trim()}" created — set its permissions below.`);
+    await loadUsersPage();
+  }catch(err){
+    toast("Could not create role: " + err.message, true);
+  }
+});
+
+function renderUsersTable(){
+  const body = $("usersBody");
+  const empty = $("usersEmpty");
+  body.innerHTML = "";
+  if(!usersCache.length){
+    empty.style.display = "block";
+    empty.textContent = "No users yet.";
+    return;
+  }
+  empty.style.display = "none";
+  usersCache.forEach(u=>{
+    let added = "—";
+    if(u.created_at && typeof u.created_at.toDate === "function"){
+      added = u.created_at.toDate().toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'});
+    }
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${u.email || u.id}</td>
+      <td><select data-uid="${u.id}"></select></td>
+      <td>${added}</td>
+      <td><button class="mini-btn del" data-remove="${u.id}">Remove Access</button></td>`;
+    body.appendChild(tr);
+    fillRoleSelect(tr.querySelector("select"), u.role);
+  });
+  body.querySelectorAll("select[data-uid]").forEach(sel=>{
+    sel.addEventListener("change", async ()=>{
+      const uid = sel.dataset.uid;
+      try{
+        await db.collection(USERS_COLLECTION).doc(uid).update({role: sel.value});
+        const u = usersCache.find(x=>x.id === uid);
+        if(u) u.role = sel.value;
+        toast("Role updated.");
+        if(uid === currentUser.uid){
+          currentUserRole = sel.value;
+          await loadUserPermissions(currentUser);
+          $("userChipText").textContent = `${currentUser.email} · ${currentUserRole}`;
+          applyPermissions();
+        }
+      }catch(err){
+        toast("Update failed: " + err.message, true);
+      }
+    });
+  });
+  body.querySelectorAll("[data-remove]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const uid = btn.dataset.remove;
+      const u = usersCache.find(x=>x.id === uid);
+      if(!confirm(`Remove ${u ? u.email : "this user"}'s access? They will no longer be able to use the app, though their sign-in account itself isn't deleted.`)) return;
+      try{
+        await db.collection(USERS_COLLECTION).doc(uid).delete();
+        toast("Access removed.");
+        await loadUsersPage();
+      }catch(err){
+        toast("Remove failed: " + err.message, true);
+      }
+    });
+  });
+}
+
+$("btnAddUser").addEventListener("click", async ()=>{
+  const email = $("newUserEmail").value.trim();
+  const password = $("newUserPassword").value;
+  const role = $("newUserRole").value;
+  const status = $("addUserStatus");
+  if(!email || !password || !role){
+    toast("Please fill in email, password, and role.", true);
+    return;
+  }
+  if(password.length < 6){
+    toast("Password must be at least 6 characters.", true);
+    return;
+  }
+  const btn = $("btnAddUser");
+  btn.disabled = true; btn.textContent = "➕ Creating…";
+  status.textContent = "";
+  try{
+    const cred = await secondaryAuth().createUserWithEmailAndPassword(email, password);
+    const uid = cred.user.uid;
+    await secondaryAuth().signOut();
+    await db.collection(USERS_COLLECTION).doc(uid).set({
+      email, role, created_at: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    toast(`User ${email} created.`);
+    $("newUserEmail").value = ""; $("newUserPassword").value = "";
+    await loadUsersPage();
+  }catch(err){
+    status.textContent = friendlyAuthError(err);
+  }finally{
+    btn.disabled = false; btn.textContent = "➕ Create User";
+  }
+});
+
+$("btnRefreshUsers").addEventListener("click", loadUsersPage);
+
+</script>
+</body>
+</html>
