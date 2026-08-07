@@ -412,6 +412,31 @@
   @media (max-width:480px){
     .quotes-list{grid-template-columns:1fr;}
   }
+
+  /* ---------- Roles & Users (mobile-friendly cards) ---------- */
+  .role-list, .users-list{display:flex;flex-direction:column;gap:12px;}
+  .role-card, .user-card{border:1px solid var(--line);border-radius:8px;padding:14px 16px;background:#fff;}
+  .role-card-header, .user-card-header{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+    padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--line);
+  }
+  .role-card-header .role-name, .user-card-header .user-email{font-weight:700;color:var(--navy);font-size:13.5px;}
+  .role-perm-row{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:8px 0;border-bottom:1px solid #f0f2f4;
+  }
+  .role-perm-row:last-child{border-bottom:none;}
+  .role-perm-label{font-size:12.5px;color:var(--ink);flex:1;min-width:150px;}
+  .role-perm-toggles{display:flex;gap:14px;flex:none;}
+  .role-perm-toggles label{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-soft);cursor:pointer;}
+  .role-perm-toggles input[type="checkbox"]{width:16px;height:16px;accent-color:var(--blue);cursor:pointer;}
+  .user-card-body{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+  .user-card-body .field{flex:1;min-width:160px;margin:0;}
+  .user-card-added{font-size:11.5px;color:var(--ink-soft);}
+  @media (max-width:480px){
+    .role-perm-row{flex-direction:column;align-items:flex-start;}
+    .user-card-body{flex-direction:column;align-items:stretch;}
+  }
 </style>
 </head>
 <body>
@@ -421,7 +446,7 @@
   <div class="login-card">
     <div class="login-mark">NGK</div>
     <h1>New Golden Key</h1>
-    <p class="login-sub">Sign in</p>
+    <p class="login-sub">Sign in to the pricing tool</p>
     <form id="loginForm">
       <label class="field"><span class="lab">Email</span><input type="email" id="loginEmail" autocomplete="username" required></label>
       <label class="field" style="margin-top:10px;"><span class="lab">Password</span><input type="password" id="loginPassword" autocomplete="current-password" required></label>
@@ -591,7 +616,7 @@
       <div class="card-head"><span class="idx">9</span><h2>Revision &amp; Export</h2></div>
       <div class="card-body">
         <div class="workflow-box" id="workflowBox">📋 WORKFLOW:
-• New quotation — fill in the form and click "Save". The reference (Q1/ht/mm/yyyy) is generated automatically: the number after "Q" is the next free number for this month, the letters are from the Item Type, and Rev starts at 00.
+• New quotation — fill in the form and click "Save to Firebase". The reference (Q1/ht/mm/yyyy) is generated automatically: the number after "Q" is the next free number for this month, the letters are from the Item Type, and Rev starts at 00.
 • Editing a quotation — open it from the Quotations tab, then change anything here. The reference stays the same, and the revision only advances (Rev 01, Rev 02, …) if something actually changed since it was loaded.
 • Click "Start New Quotation" below to detach from the loaded quotation and begin a fresh one.</div>
         <div class="grid cols-2">
@@ -624,7 +649,7 @@
 
       <div class="btn-row no-print">
         <button class="action" id="btnPrint" type="button">🖨 Print / Save as PDF</button>
-        <button class="action green" id="btnSaveFb" type="button">☁ Save</button>
+        <button class="action green" id="btnSaveFb" type="button">☁ Save to Firebase</button>
       </div>
     </div>
   </aside>
@@ -694,9 +719,10 @@
 <main class="quotes-page panel no-print" id="page-users" style="display:none;">
   <div class="wo-toolbar-top no-print">
     <h3>Users &amp; Roles</h3>
+    <button class="action secondary" id="btnShowAddUser" type="button">➕ Add User</button>
   </div>
 
-  <div class="wo-form">
+  <div class="wo-form" id="addUserPanel" style="display:none;">
     <h3>Add User</h3>
     <div class="grid cols-3">
       <label class="field"><span class="lab">Email</span><input type="email" id="newUserEmail"></label>
@@ -704,42 +730,27 @@
       <label class="field"><span class="lab">Role</span><select id="newUserRole"></select></label>
     </div>
     <div class="btn-row no-print" style="padding:12px 0 0;">
-      <button class="action green" id="btnAddUser" type="button">➕ Create User</button>
+      <button class="action green" id="btnCreateUser" type="button">➕ Create User</button>
+      <button class="action secondary" id="btnCancelAddUser" type="button">✕ Cancel</button>
     </div>
     <p id="addUserStatus" style="font-size:11.5px;color:var(--ink-soft);margin:8px 0 0;"></p>
     <div class="note-box" style="margin-top:10px;">The new user can sign in immediately with this email and password. Ask them to change their password after their first sign-in — this tool has no self-service password reset.</div>
   </div>
 
   <div class="wo-form">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
       <h3 style="margin:0;">Roles &amp; Permissions</h3>
       <button class="action secondary" id="btnAddRole" type="button" style="flex:none;">➕ Add Role</button>
     </div>
-    <div style="overflow-x:auto;margin-top:12px;">
-      <table class="quotes-tbl" id="rolesTbl">
-        <thead>
-          <tr>
-            <th>Role</th>
-            <th class="num">Calculator</th><th class="num">Quotations</th><th class="num">Work Orders</th><th class="num">Users</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="rolesBody"></tbody>
-      </table>
-    </div>
-    <p style="font-size:11px;color:var(--ink-soft);margin-top:8px;">Each cell has two checkboxes: <b>R</b> (can open/view the page) and <b>E</b> (can create, save, or delete on that page). Changes save automatically.</p>
+    <p style="font-size:11.5px;color:var(--ink-soft);margin:6px 0 14px;">For each page: <b>View</b> lets a role open it, <b>Edit</b> lets it create, save, mark finished, or delete. Changes save automatically.</p>
+    <div class="role-list" id="rolesList"></div>
   </div>
 
   <div class="wo-toolbar-top no-print" style="border-bottom:none;">
     <h3>Users</h3>
     <button class="action secondary" id="btnRefreshUsers" type="button">↻ Refresh</button>
   </div>
-  <div style="overflow-x:auto;">
-    <table class="quotes-tbl">
-      <thead><tr><th>Email</th><th>Role</th><th>Added</th><th></th></tr></thead>
-      <tbody id="usersBody"></tbody>
-    </table>
-  </div>
+  <div class="users-list" id="usersList"></div>
   <div class="quotes-empty" id="usersEmpty" style="display:none;"></div>
 </main>
 
@@ -771,16 +782,21 @@ const QUOTES_COLLECTION = "quotes";
 const WORK_ORDERS_COLLECTION = "work_orders";
 const USERS_COLLECTION = "users";
 const ROLES_COLLECTION = "roles";
-const PAGE_KEYS = ["calculator", "quotations", "workorders", "users"];
-const PAGE_LABELS = {calculator:"Calculator", quotations:"Quotations", workorders:"Work Orders", users:"Users"};
+// Work Orders is split into two independent permissions: wo_pending covers
+// working the Pending tab (recording work done, marking activities
+// finished); wo_finished covers creating new work orders and managing the
+// finished archive (viewing/unfinishing/full-editing/deleting).
+const PAGE_KEYS = ["calculator", "quotations", "wo_pending", "wo_finished", "users"];
+const PAGE_LABELS = {calculator:"Calculator", quotations:"Quotations", wo_pending:"Work Orders — Pending", wo_finished:"Work Orders — Finished / New", users:"Users"};
 const WATERPROOFING_OPTIONS = ["Bituminous","Membrane Rolls 4mm + Protection Board","Cementation","Epoxy","Crystalline","PVC Membrane","Other"];
 const PAYMENT_OPTIONS = ["Cash","Bank Transfer","Cheque","Installments"];
 
 // ================= AUTH + ROLES/PERMISSIONS =================
 const DEFAULT_ROLES = {
-  admin:   {name:"Admin",   permissions:{calculator:{read:true,edit:true},  quotations:{read:true,edit:true},  workorders:{read:true,edit:true},  users:{read:true,edit:true}}},
-  manager: {name:"Manager", permissions:{calculator:{read:true,edit:true},  quotations:{read:true,edit:true},  workorders:{read:true,edit:true},  users:{read:false,edit:false}}},
-  viewer:  {name:"Viewer",  permissions:{calculator:{read:true,edit:false}, quotations:{read:true,edit:false}, workorders:{read:true,edit:false}, users:{read:false,edit:false}}},
+  admin:      {name:"Admin",       permissions:{calculator:{read:true,edit:true},  quotations:{read:true,edit:true},  wo_pending:{read:true,edit:true},  wo_finished:{read:true,edit:true},  users:{read:true,edit:true}}},
+  manager:    {name:"Manager",     permissions:{calculator:{read:true,edit:true},  quotations:{read:true,edit:true},  wo_pending:{read:true,edit:true},  wo_finished:{read:true,edit:true},  users:{read:false,edit:false}}},
+  field_crew: {name:"Field Crew",  permissions:{calculator:{read:false,edit:false},quotations:{read:false,edit:false},wo_pending:{read:true,edit:true},  wo_finished:{read:false,edit:false},users:{read:false,edit:false}}},
+  viewer:     {name:"Viewer",      permissions:{calculator:{read:true,edit:false}, quotations:{read:true,edit:false}, wo_pending:{read:true,edit:false}, wo_finished:{read:true,edit:false}, users:{read:false,edit:false}}},
 };
 function emptyPermissions(){
   const p = {};
@@ -792,7 +808,10 @@ let currentUser = null;
 let currentUserRole = null;
 let currentPermissions = null;
 let quotationsCanEdit = true;
-let workOrdersCanEdit = true;
+let woPendingCanRead = true;
+let woPendingCanEdit = true;
+let woFinishedCanRead = true;
+let woFinishedCanEdit = true;
 let rolesCache = [];
 let usersCache = [];
 
@@ -832,11 +851,24 @@ async function loadUserPermissions(user){
   if(!userDoc.exists){
     // Bootstrap: if there are no users at all yet, the first person to sign
     // in becomes Admin automatically so the app is usable out of the box.
-    const anyUsers = await db.collection(USERS_COLLECTION).limit(1).get();
-    if(anyUsers.empty){
+    // The meta/adminBootstrap marker (written below) permanently closes this
+    // path once claimed — see the Firestore security rules. Once that door
+    // is closed, this list query is denied by the rules rather than
+    // returning "not empty", so treat a denial the same as "already taken".
+    let anyUsersEmpty = false;
+    try{
+      const anyUsers = await db.collection(USERS_COLLECTION).limit(1).get();
+      anyUsersEmpty = anyUsers.empty;
+    }catch(e){
+      anyUsersEmpty = false;
+    }
+    if(anyUsersEmpty){
       await ensureDefaultRoles();
       await db.collection(USERS_COLLECTION).doc(user.uid).set({
         email: user.email, role: "admin", created_at: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      await db.collection("meta").doc("adminBootstrap").set({
+        claimedBy: user.uid, claimedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       currentUserRole = "admin";
     } else {
@@ -853,10 +885,11 @@ async function loadUserPermissions(user){
 function applyPermissions(){
   const p = currentPermissions || emptyPermissions();
 
-  // Nav tabs: hidden entirely without read access.
+  // Nav tabs: hidden entirely without read access. Work Orders shows if
+  // either the Pending or the Finished/New permission grants read.
   document.querySelector('.tab[data-page="calc"]').style.display = p.calculator.read ? "" : "none";
   document.querySelector('.tab[data-page="quotes"]').style.display = p.quotations.read ? "" : "none";
-  document.querySelector('.tab[data-page="workorders"]').style.display = p.workorders.read ? "" : "none";
+  document.querySelector('.tab[data-page="workorders"]').style.display = (p.wo_pending.read || p.wo_finished.read) ? "" : "none";
   $("usersTabBtn").style.display = p.users.read ? "" : "none";
 
   // Calculator: without edit rights, the whole form goes read-only.
@@ -869,13 +902,31 @@ function applyPermissions(){
   // Quotations / Work Orders: the list renderers themselves check these
   // flags each time they draw, so re-renders never leak edit controls back in.
   quotationsCanEdit = !!p.quotations.edit;
-  workOrdersCanEdit = !!p.workorders.edit;
-  if(!workOrdersCanEdit) $("btnNewWO").style.display = "none";
+  woPendingCanRead = !!p.wo_pending.read;
+  woPendingCanEdit = !!p.wo_pending.edit;
+  woFinishedCanRead = !!p.wo_finished.read;
+  woFinishedCanEdit = !!p.wo_finished.edit;
+
+  // "New Work Order" (creating one) belongs to the Finished/New permission.
+  if(!woFinishedCanEdit) $("btnNewWO").style.display = "none";
+
+  // Hide whichever Pending/Finished subtab the role can't read, and default
+  // to the one it can.
+  const pendingTabBtn = document.querySelector('.wo-subtabs .subtab[data-wo-view="pending"]');
+  const finishedTabBtn = document.querySelector('.wo-subtabs .subtab[data-wo-view="finished"]');
+  pendingTabBtn.style.display = woPendingCanRead ? "" : "none";
+  finishedTabBtn.style.display = woFinishedCanRead ? "" : "none";
+  if(!woPendingCanRead && woFinishedCanRead){
+    woViewMode = "finished";
+    pendingTabBtn.classList.remove("active");
+    finishedTabBtn.classList.add("active");
+  }
 
   // Land the person on the first page they're actually allowed to read.
   if(!p.calculator.read){
-    const order = ["quotations","workorders","users"];
-    const firstAllowed = order.find(k => p[k] && p[k].read);
+    const order = ["quotations","wo_pending_or_finished","users"];
+    const woAllowed = p.wo_pending.read || p.wo_finished.read;
+    const firstAllowed = p.quotations.read ? "quotations" : (woAllowed ? "workorders" : (p.users.read ? "users" : null));
     if(firstAllowed){
       const tabKey = firstAllowed === "quotations" ? "quotes" : firstAllowed;
       const btn = document.querySelector(`.tab[data-page="${tabKey}"]`);
@@ -2061,10 +2112,10 @@ function renderWoTable(list){
               ${d.work_done ? `<div style="font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;">${d.work_done}</div>` : ""}
               <div class="wo-activity-footer">
                 <span class="wo-finished-line">✓ Finished ${d.finish_date}</span>
-                ${workOrdersCanEdit ? `<button class="mini-btn" data-unfinish="${idx}">↺ Unfinish</button>` : ""}
+                ${woFinishedCanEdit ? `<button class="mini-btn" data-unfinish="${idx}">↺ Unfinish</button>` : ""}
               </div>`;
-            if(workOrdersCanEdit) act.querySelector("[data-unfinish]").addEventListener("click", ()=> unfinishActivity(item, idx));
-          } else if(workOrdersCanEdit){
+            if(woFinishedCanEdit) act.querySelector("[data-unfinish]").addEventListener("click", ()=> unfinishActivity(item, idx));
+          } else if(woPendingCanEdit){
             act.innerHTML = `
               <div class="wo-activity-desc">${d.activity || "—"}</div>
               <label class="field"><span class="lab" style="font-size:11px;">Work Done</span>
@@ -2086,7 +2137,7 @@ function renderWoTable(list){
         });
       }
 
-      if(workOrdersCanEdit){
+      if(woFinishedCanEdit){
         const footer = document.createElement("div");
         footer.className = "wo-card-footer";
         footer.innerHTML = `
@@ -2147,8 +2198,8 @@ async function loadUsersPage(){
   const usersSnap = await db.collection(USERS_COLLECTION).orderBy("created_at", "desc").limit(200).get().catch(err=>{ toast("Could not load users: " + err.message, true); return null; });
   usersCache = usersSnap ? usersSnap.docs.map(d=>({id:d.id, ...d.data()})) : [];
 
-  renderRolesTable();
-  renderUsersTable();
+  renderRolesList();
+  renderUsersList();
   fillRoleSelect($("newUserRole"));
 }
 
@@ -2163,27 +2214,40 @@ function fillRoleSelect(sel, selected){
   });
 }
 
-function renderRolesTable(){
-  const body = $("rolesBody");
-  body.innerHTML = "";
+function renderRolesList(){
+  const list = $("rolesList");
+  list.innerHTML = "";
   rolesCache.forEach(role=>{
     const perms = Object.assign(emptyPermissions(), role.permissions);
     const usedByCount = usersCache.filter(u=>u.role === role.id).length;
-    const tr = document.createElement("tr");
-    const cell = (pageKey)=>{
+    const canDelete = role.id !== "admin" && usedByCount === 0;
+
+    const card = document.createElement("div");
+    card.className = "role-card";
+
+    const rows = PAGE_KEYS.map(pageKey=>{
       const p = perms[pageKey] || {read:false, edit:false};
-      return `<td class="num">
-        <label style="margin-right:8px;"><input type="checkbox" data-role="${role.id}" data-page="${pageKey}" data-field="read" ${p.read?"checked":""}> R</label>
-        <label><input type="checkbox" data-role="${role.id}" data-page="${pageKey}" data-field="edit" ${p.edit?"checked":""}> E</label>
-      </td>`;
-    };
-    tr.innerHTML = `
-      <td class="ref-cell">${role.name || role.id}</td>
-      ${cell("calculator")}${cell("quotations")}${cell("workorders")}${cell("users")}
-      <td>${role.id === "admin" || usedByCount > 0 ? `<span style="font-size:11px;color:var(--ink-soft);">${usedByCount} user(s)</span>` : `<button class="mini-btn del" data-role-del="${role.id}">Delete</button>`}</td>`;
-    body.appendChild(tr);
+      return `
+        <div class="role-perm-row">
+          <span class="role-perm-label">${PAGE_LABELS[pageKey] || pageKey}</span>
+          <div class="role-perm-toggles">
+            <label><input type="checkbox" data-role="${role.id}" data-page="${pageKey}" data-field="read" ${p.read?"checked":""}> View</label>
+            <label><input type="checkbox" data-role="${role.id}" data-page="${pageKey}" data-field="edit" ${p.edit?"checked":""}> Edit</label>
+          </div>
+        </div>`;
+    }).join("");
+
+    card.innerHTML = `
+      <div class="role-card-header">
+        <span class="role-name">${role.name || role.id}</span>
+        ${canDelete
+          ? `<button class="mini-btn del" data-role-del="${role.id}">Delete Role</button>`
+          : `<span style="font-size:11px;color:var(--ink-soft);">${role.id === "admin" ? "built-in" : `${usedByCount} user(s) assigned`}</span>`}
+      </div>
+      ${rows}`;
+    list.appendChild(card);
   });
-  body.querySelectorAll("input[type=checkbox]").forEach(cb=>{
+  list.querySelectorAll("input[type=checkbox]").forEach(cb=>{
     cb.addEventListener("change", async ()=>{
       const roleId = cb.dataset.role, pageKey = cb.dataset.page, field = cb.dataset.field;
       try{
@@ -2202,7 +2266,7 @@ function renderRolesTable(){
       }
     });
   });
-  body.querySelectorAll("[data-role-del]").forEach(btn=>{
+  list.querySelectorAll("[data-role-del]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const roleId = btn.dataset.roleDel;
       if(!confirm(`Delete the "${roleId}" role? This cannot be undone.`)) return;
@@ -2231,10 +2295,10 @@ $("btnAddRole").addEventListener("click", async ()=>{
   }
 });
 
-function renderUsersTable(){
-  const body = $("usersBody");
+function renderUsersList(){
+  const list = $("usersList");
   const empty = $("usersEmpty");
-  body.innerHTML = "";
+  list.innerHTML = "";
   if(!usersCache.length){
     empty.style.display = "block";
     empty.textContent = "No users yet.";
@@ -2246,16 +2310,21 @@ function renderUsersTable(){
     if(u.created_at && typeof u.created_at.toDate === "function"){
       added = u.created_at.toDate().toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'});
     }
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${u.email || u.id}</td>
-      <td><select data-uid="${u.id}"></select></td>
-      <td>${added}</td>
-      <td><button class="mini-btn del" data-remove="${u.id}">Remove Access</button></td>`;
-    body.appendChild(tr);
-    fillRoleSelect(tr.querySelector("select"), u.role);
+    const card = document.createElement("div");
+    card.className = "user-card";
+    card.innerHTML = `
+      <div class="user-card-header">
+        <span class="user-email">${u.email || u.id}</span>
+        <span class="user-card-added">Added ${added}</span>
+      </div>
+      <div class="user-card-body">
+        <label class="field"><span class="lab" style="font-size:11px;">Role</span><select data-uid="${u.id}"></select></label>
+        <button class="mini-btn del" data-remove="${u.id}">Remove Access</button>
+      </div>`;
+    list.appendChild(card);
+    fillRoleSelect(card.querySelector("select"), u.role);
   });
-  body.querySelectorAll("select[data-uid]").forEach(sel=>{
+  list.querySelectorAll("select[data-uid]").forEach(sel=>{
     sel.addEventListener("change", async ()=>{
       const uid = sel.dataset.uid;
       try{
@@ -2274,7 +2343,7 @@ function renderUsersTable(){
       }
     });
   });
-  body.querySelectorAll("[data-remove]").forEach(btn=>{
+  list.querySelectorAll("[data-remove]").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const uid = btn.dataset.remove;
       const u = usersCache.find(x=>x.id === uid);
@@ -2290,7 +2359,19 @@ function renderUsersTable(){
   });
 }
 
-$("btnAddUser").addEventListener("click", async ()=>{
+$("btnShowAddUser").addEventListener("click", ()=>{
+  $("addUserPanel").style.display = "block";
+  $("addUserStatus").textContent = "";
+  window.scrollTo({top:0, behavior:"smooth"});
+});
+
+$("btnCancelAddUser").addEventListener("click", ()=>{
+  $("addUserPanel").style.display = "none";
+  $("newUserEmail").value = ""; $("newUserPassword").value = "";
+  $("addUserStatus").textContent = "";
+});
+
+$("btnCreateUser").addEventListener("click", async ()=>{
   const email = $("newUserEmail").value.trim();
   const password = $("newUserPassword").value;
   const role = $("newUserRole").value;
@@ -2303,7 +2384,7 @@ $("btnAddUser").addEventListener("click", async ()=>{
     toast("Password must be at least 6 characters.", true);
     return;
   }
-  const btn = $("btnAddUser");
+  const btn = $("btnCreateUser");
   btn.disabled = true; btn.textContent = "➕ Creating…";
   status.textContent = "";
   try{
@@ -2315,6 +2396,7 @@ $("btnAddUser").addEventListener("click", async ()=>{
     });
     toast(`User ${email} created.`);
     $("newUserEmail").value = ""; $("newUserPassword").value = "";
+    $("addUserPanel").style.display = "none";
     await loadUsersPage();
   }catch(err){
     status.textContent = friendlyAuthError(err);
