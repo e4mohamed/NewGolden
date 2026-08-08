@@ -413,6 +413,21 @@
     .quotes-list{grid-template-columns:1fr;}
   }
 
+  /* ---------- Attachments ---------- */
+  .attach-list{display:flex;flex-direction:column;gap:6px;}
+  .attach-row{
+    display:flex;align-items:center;gap:10px;padding:8px 10px;
+    border:1px solid var(--line);border-radius:5px;background:#fafbfc;font-size:12.5px;
+  }
+  .attach-row .attach-icon{flex:none;font-size:15px;}
+  .attach-row a{color:var(--blue);font-weight:600;text-decoration:none;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .attach-row a:hover{text-decoration:underline;}
+  .attach-row .attach-meta{flex:none;font-size:11px;color:var(--ink-soft);}
+  .attach-row .mini-btn.del{flex:none;}
+  .quote-card-attach{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);}
+  .quote-card-attach-add{margin-top:8px;}
+  .quote-card-attach-add input[type="file"]{font-size:11px;}
+
   /* ---------- Roles & Users (mobile-friendly cards) ---------- */
   .role-list, .users-list{display:flex;flex-direction:column;gap:12px;}
   .role-card, .user-card{border:1px solid var(--line);border-radius:8px;padding:14px 16px;background:#fff;}
@@ -446,7 +461,7 @@
   <div class="login-card">
     <div class="login-mark">NGK</div>
     <h1>New Golden Key</h1>
-    <p class="login-sub">Sign in</p>
+    <p class="login-sub">Sign in to the pricing tool</p>
     <form id="loginForm">
       <label class="field"><span class="lab">Email</span><input type="email" id="loginEmail" autocomplete="username" required></label>
       <label class="field" style="margin-top:10px;"><span class="lab">Password</span><input type="password" id="loginPassword" autocomplete="current-password" required></label>
@@ -616,7 +631,7 @@
       <div class="card-head"><span class="idx">9</span><h2>Revision &amp; Export</h2></div>
       <div class="card-body">
         <div class="workflow-box" id="workflowBox">📋 WORKFLOW:
-• New quotation — fill in the form and click "Save". The reference (Q1/ht/mm/yyyy) is generated automatically: the number after "Q" is the next free number for this month, the letters are from the Item Type, and Rev starts at 00.
+• New quotation — fill in the form and click "Save to Firebase". The reference (Q1/ht/mm/yyyy) is generated automatically: the number after "Q" is the next free number for this month, the letters are from the Item Type, and Rev starts at 00.
 • Editing a quotation — open it from the Quotations tab, then change anything here. The reference stays the same, and the revision only advances (Rev 01, Rev 02, …) if something actually changed since it was loaded.
 • Click "Start New Quotation" below to detach from the loaded quotation and begin a fresh one.</div>
         <div class="grid cols-2">
@@ -624,6 +639,21 @@
           <label class="field"><span class="lab">Quote No.</span><small>auto — next free number this month</small><input type="text" id="quoteSeq" value="1" readonly></label>
         </div>
         <div class="note-box" style="margin-top:12px;">To reload, edit, or delete a previous quote, open the <b>Quotations</b> tab at the top of the page. Use the <b>Start New Quotation</b> button at the top of this page to detach from a loaded quotation.</div>
+      </div>
+    </section>
+
+    <section class="card panel">
+      <div class="card-head"><span class="idx">10</span><h2>Attachments (PDF)</h2></div>
+      <div class="card-body">
+        <div id="attachNeedsSaveNote" class="note-box">Save this quotation first — once it exists in Firebase, you can attach PDF files to it here.</div>
+        <div id="attachControls" style="display:none;">
+          <label class="field"><span class="lab">Attach PDF file(s)</span><input type="file" id="attachFileInput" accept="application/pdf,.pdf" multiple></label>
+          <div class="btn-row no-print" style="padding:10px 0 0;">
+            <button class="action" id="btnUploadAttach" type="button">📎 Upload</button>
+          </div>
+          <p id="attachStatus" style="font-size:11.5px;color:var(--ink-soft);margin:8px 0 0;"></p>
+          <div class="attach-list" id="attachList" style="margin-top:12px;"></div>
+        </div>
       </div>
     </section>
   </div>
@@ -649,7 +679,7 @@
 
       <div class="btn-row no-print">
         <button class="action" id="btnPrint" type="button">🖨 Print / Save as PDF</button>
-        <button class="action green" id="btnSaveFb" type="button">☁ Save</button>
+        <button class="action green" id="btnSaveFb" type="button">☁ Save to Firebase</button>
       </div>
     </div>
   </aside>
@@ -765,6 +795,11 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<!-- Google Identity Services — used only for the "Sign in with Google" popup
+     that authorizes uploads to Google Drive (PDF attachments). Firebase
+     Storage isn't used, since new projects now require the Blaze plan. -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <script>
 const firebaseConfig = {
@@ -897,6 +932,7 @@ function applyPermissions(){
     document.querySelectorAll("#app input, #app select, #app textarea").forEach(el=>{ el.disabled = true; });
     $("btnSaveFb").style.display = "none";
     $("btnNewQuote").style.display = "none";
+    $("btnUploadAttach").style.display = "none";
   }
 
   // Quotations / Work Orders: the list renderers themselves check these
@@ -938,6 +974,7 @@ function applyPermissions(){
 function initAppAfterAuth(){
   update();
   refreshQuoteSeqIfNew();
+  renderAttachControls();
 }
 
 $("btnSignOut").addEventListener("click", ()=> auth.signOut());
@@ -1042,6 +1079,240 @@ let loadedRevision = 0;
 let loadedSnapshot = null; // form-state snapshot captured at load/save time
 let loadedQuoteStatus = null; // "Work Order" once linked — blocks further saves
 let isDirty = false;
+let currentAttachments = []; // PDF attachments for the quotation currently loaded/saved
+
+function formatBytes(n){
+  if(!n && n !== 0) return "";
+  if(n < 1024) return n + " B";
+  if(n < 1024*1024) return (n/1024).toFixed(0) + " KB";
+  return (n/(1024*1024)).toFixed(1) + " MB";
+}
+
+// ================= GOOGLE DRIVE (PDF ATTACHMENTS) =================
+// Firebase Storage now requires the pay-as-you-go Blaze plan even for
+// free-tier usage, so PDF attachments are stored in a shared Google Drive
+// folder instead — Firestore only stores the resulting file id/link.
+//
+// ⚠️ SETUP REQUIRED — replace these two placeholders before this feature
+// will work:
+//   1. GOOGLE_DRIVE_CLIENT_ID — an OAuth 2.0 "Web application" Client ID
+//      from Google Cloud Console (APIs & Services → Credentials) in the
+//      same (or any) GCP project. Enable the "Google Drive API" there too.
+//      Add every domain this file is hosted on to "Authorized JavaScript
+//      origins" (OAuth via Google Identity Services needs a real https://
+//      origin — it will NOT work opened as a local file:// page).
+//   2. GOOGLE_DRIVE_FOLDER_ID — create a folder in Google Drive for
+//      quotation attachments, share it with everyone on the team (Editor
+//      access — e.g. "Anyone at yourcompany.com with the link"), then copy
+//      the folder id from its URL: drive.google.com/drive/folders/<ID>.
+// Each person attaching or removing a file will see a one-time Google
+// sign-in popup authorizing this app to manage files it creates in Drive.
+const GOOGLE_DRIVE_CLIENT_ID = "234237215523-5r80qj2jnuh4k2p1j67lv0o7thur4lq6.apps.googleusercontent.com";
+const GOOGLE_DRIVE_FOLDER_ID = "https://drive.google.com/drive/folders/1rwKhDJmeCfyfMP4Hzg44QwRw_UdtNVVO?usp=drive_link";
+const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+
+let gDriveTokenClient = null;
+let gDriveAccessToken = null;
+let gDriveTokenExpiry = 0;
+
+function driveConfigured(){
+  return GOOGLE_DRIVE_CLIENT_ID && !GOOGLE_DRIVE_CLIENT_ID.startsWith("YOUR_")
+    && GOOGLE_DRIVE_FOLDER_ID && !GOOGLE_DRIVE_FOLDER_ID.startsWith("YOUR_");
+}
+
+// Resolves with a valid access token, reusing a cached one if it hasn't
+// expired, otherwise triggering the Google consent popup. Must be called
+// from within a user gesture (a click handler) the first time.
+function getDriveAccessToken(){
+  return new Promise((resolve, reject)=>{
+    if(!driveConfigured()){
+      reject(new Error("Google Drive isn't set up yet — an admin needs to add the Client ID and folder ID."));
+      return;
+    }
+    if(gDriveAccessToken && Date.now() < gDriveTokenExpiry - 60000){
+      resolve(gDriveAccessToken);
+      return;
+    }
+    if(!window.google || !google.accounts || !google.accounts.oauth2){
+      reject(new Error("Google sign-in hasn't finished loading yet — please try again in a moment."));
+      return;
+    }
+    if(!gDriveTokenClient){
+      gDriveTokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_DRIVE_CLIENT_ID,
+        scope: GOOGLE_DRIVE_SCOPE,
+        callback: ()=>{}, // replaced per-request just below
+      });
+    }
+    gDriveTokenClient.callback = (resp)=>{
+      if(resp.error){ reject(new Error(resp.error)); return; }
+      gDriveAccessToken = resp.access_token;
+      gDriveTokenExpiry = Date.now() + (resp.expires_in || 3600) * 1000;
+      resolve(gDriveAccessToken);
+    };
+    gDriveTokenClient.requestAccessToken({prompt: gDriveAccessToken ? "" : "consent"});
+  });
+}
+
+function arrayBufferToBase64(buffer){
+  let binary = "";
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  for(let i = 0; i < bytes.length; i += chunkSize){
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+// Multipart upload straight to the Drive REST API — no server needed.
+async function uploadFileToDrive(file, accessToken){
+  const metadata = {name: file.name, parents: [GOOGLE_DRIVE_FOLDER_ID], mimeType: "application/pdf"};
+  const boundary = "ngk-" + Date.now();
+  const base64Data = arrayBufferToBase64(await file.arrayBuffer());
+  const body =
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
+    `--${boundary}\r\nContent-Type: application/pdf\r\nContent-Transfer-Encoding: base64\r\n\r\n${base64Data}\r\n` +
+    `--${boundary}--`;
+  const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink,name", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + accessToken,
+      "Content-Type": `multipart/related; boundary=${boundary}`,
+    },
+    body,
+  });
+  if(!res.ok){
+    const err = await res.json().catch(()=>({}));
+    throw new Error((err.error && err.error.message) || `Upload failed (${res.status})`);
+  }
+  return await res.json();
+}
+
+async function deleteFileFromDrive(fileId, accessToken){
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+    method: "DELETE",
+    headers: {"Authorization": "Bearer " + accessToken},
+  });
+  if(!res.ok && res.status !== 404){
+    const err = await res.json().catch(()=>({}));
+    throw new Error((err.error && err.error.message) || `Delete failed (${res.status})`);
+  }
+}
+
+// Uploads a set of PDF files to the shared Drive folder, appends their
+// metadata to the quote's `attachments` array in Firestore, and returns the
+// resulting array. Skips non-PDF or oversized files with a toast.
+async function uploadPdfAttachments(quoteId, files, existingAttachments){
+  const result = (existingAttachments || []).slice();
+  const MAX_SIZE = 10 * 1024 * 1024; // keep the base64 upload payload reasonable
+  let accessToken;
+  try{
+    accessToken = await getDriveAccessToken();
+  }catch(err){
+    toast("Google Drive: " + err.message, true);
+    return result;
+  }
+  for(const file of Array.from(files)){
+    const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+    if(!isPdf){ toast(`Skipped "${file.name}" — only PDF files can be attached.`, true); continue; }
+    if(file.size > MAX_SIZE){ toast(`Skipped "${file.name}" — PDFs must be under 10 MB.`, true); continue; }
+    try{
+      const uploaded = await uploadFileToDrive(file, accessToken);
+      result.push({
+        name: file.name,
+        driveFileId: uploaded.id,
+        url: uploaded.webViewLink || `https://drive.google.com/file/d/${uploaded.id}/view`,
+        size: file.size,
+        uploaded_at: new Date().toISOString()
+      });
+    }catch(err){
+      toast(`Failed to upload "${file.name}": ` + err.message, true);
+    }
+  }
+  await db.collection(QUOTES_COLLECTION).doc(quoteId).update({attachments: result});
+  return result;
+}
+
+async function deletePdfAttachment(quoteId, attachment, currentList){
+  try{
+    const accessToken = await getDriveAccessToken();
+    if(attachment.driveFileId) await deleteFileFromDrive(attachment.driveFileId, accessToken);
+  }catch(e){
+    // Still remove the record even if the Drive delete itself fails (e.g.
+    // token issue, or someone else already deleted the file in Drive).
+  }
+  const result = currentList.filter(a => a.driveFileId !== attachment.driveFileId);
+  await db.collection(QUOTES_COLLECTION).doc(quoteId).update({attachments: result});
+  return result;
+}
+
+function renderAttachRows(container, attachments, onRemove){
+  container.innerHTML = "";
+  if(!attachments || !attachments.length){
+    container.innerHTML = `<p style="font-size:12px;color:var(--ink-soft);margin:0;">No PDF files attached yet.</p>`;
+    return;
+  }
+  attachments.forEach(a=>{
+    const row = document.createElement("div");
+    row.className = "attach-row";
+    row.innerHTML = `
+      <span class="attach-icon">📄</span>
+      <a href="${a.url}" target="_blank" rel="noopener">${a.name}</a>
+      <span class="attach-meta">${formatBytes(a.size)}</span>
+      ${onRemove ? `<button class="mini-btn del" type="button">Remove</button>` : ""}`;
+    if(onRemove){
+      row.querySelector(".mini-btn.del").addEventListener("click", ()=> onRemove(a));
+    }
+    container.appendChild(row);
+  });
+}
+
+// ---- Calculator: Attachments card ----
+function renderAttachControls(){
+  const needsSave = $("attachNeedsSaveNote");
+  const controls = $("attachControls");
+  if(!currentQuoteId){
+    needsSave.style.display = "block";
+    controls.style.display = "none";
+    return;
+  }
+  needsSave.style.display = "none";
+  controls.style.display = "block";
+  renderAttachRows($("attachList"), currentAttachments, async (a)=>{
+    if(!confirm(`Remove "${a.name}"? This cannot be undone.`)) return;
+    try{
+      currentAttachments = await deletePdfAttachment(currentQuoteId, a, currentAttachments);
+      renderAttachControls();
+      toast("Attachment removed.");
+    }catch(err){
+      toast("Remove failed: " + err.message, true);
+    }
+  });
+}
+
+$("btnUploadAttach").addEventListener("click", async ()=>{
+  if(!currentQuoteId) return;
+  const input = $("attachFileInput");
+  if(!input.files || !input.files.length){
+    toast("Choose one or more PDF files first.", true);
+    return;
+  }
+  const btn = $("btnUploadAttach");
+  btn.disabled = true; btn.textContent = "📎 Uploading…";
+  $("attachStatus").textContent = "";
+  try{
+    currentAttachments = await uploadPdfAttachments(currentQuoteId, input.files, currentAttachments);
+    input.value = "";
+    renderAttachControls();
+    toast("PDF(s) attached.");
+    quotesCache = null;
+  }catch(err){
+    $("attachStatus").textContent = "Upload failed: " + err.message;
+  }finally{
+    btn.disabled = false; btn.textContent = "📎 Upload";
+  }
+});
+
 
 // Snapshot of every field that defines "the quotation" (excludes the
 // auto-generated ref/revision/quote-no themselves, to avoid feedback loops).
@@ -1463,6 +1734,10 @@ function buildJsonData(c){
     quote_year: (c.quotationNo.split("/")[3]) || "",
     payment_method: c.paymentMethod,
     comment_1: c.comments[0], comment_2: c.comments[1], comment_3: c.comments[2], comment_4: c.comments[3], comment_5: c.comments[4],
+    // Preserve whatever attachments are currently known for this quote —
+    // this write replaces the whole document, so this must always be
+    // included or a re-save would silently wipe attached PDFs.
+    attachments: currentAttachments || [],
     _exported_at: new Date().toISOString()
   };
 }
@@ -1505,6 +1780,7 @@ $("btnSaveFb").addEventListener("click", async ()=>{
     isDirty = false;
     quotesCache = null; // force refresh next time the Quotations tab is opened
     update();
+    renderAttachControls();
     toast(`Saved ${c.quotationNo} — Rev ${padRev(c.revisionNo)}.`);
   }catch(err){
     toast("Firebase save failed: " + err.message, true);
@@ -1519,9 +1795,11 @@ $("btnNewQuote").addEventListener("click", ()=>{
   loadedRevision = 0;
   loadedSnapshot = null;
   loadedQuoteStatus = null;
+  currentAttachments = [];
   isDirty = false;
   refreshQuoteSeqIfNew();
   update();
+  renderAttachControls();
   toast("Detached — the next save will create a brand-new quotation.");
 });
 
@@ -1595,10 +1873,12 @@ function applyLoadedData(data){
   loadedQuotationNo = data.quotation_no || currentQuoteId;
   loadedRevision = parseInt(data.revision) || 0;
   loadedQuoteStatus = data.status || null;
+  currentAttachments = data.attachments || [];
   loadedSnapshot = serializeFormState();
   isDirty = false;
 
   update();
+  renderAttachControls();
   if(loadedQuoteStatus === "Work Order"){
     toast(`Loaded ${loadedQuotationNo} — this quotation is linked to a work order and is read-only.`, true);
   } else {
@@ -1695,8 +1975,52 @@ function renderQuotesTable(list){
         <div class="quote-card-row"><span>Final Price</span><span class="quote-card-price">${priceHtml}</span></div>
         <div class="quote-card-row"><span>Saved</span><span>${saved}</span></div>
       </div>
-      <div class="quote-card-actions">${actionsHtml}</div>`;
+      <div class="quote-card-actions">${actionsHtml}</div>
+      <div class="quote-card-attach">
+        <div class="attach-list" data-attach-list="${d.id}"></div>
+        ${quotationsCanEdit ? `
+          <div class="quote-card-attach-add">
+            <input type="file" accept="application/pdf,.pdf" multiple data-attach-input="${d.id}">
+            <button class="mini-btn" data-attach-upload="${d.id}" style="margin-top:6px;">📎 Attach PDF</button>
+          </div>` : ""}
+      </div>`;
     listEl.appendChild(card);
+
+    const attachListEl = card.querySelector(`[data-attach-list="${d.id}"]`);
+    const redrawAttachments = ()=>{
+      renderAttachRows(attachListEl, d.attachments, quotationsCanEdit ? async (a)=>{
+        if(!confirm(`Remove "${a.name}"? This cannot be undone.`)) return;
+        try{
+          d.attachments = await deletePdfAttachment(d.id, a, d.attachments || []);
+          redrawAttachments();
+          if(d.id === currentQuoteId){ currentAttachments = d.attachments; renderAttachControls(); }
+          toast("Attachment removed.");
+        }catch(err){
+          toast("Remove failed: " + err.message, true);
+        }
+      } : null);
+    };
+    redrawAttachments();
+
+    if(quotationsCanEdit){
+      card.querySelector("[data-attach-upload]").addEventListener("click", async (e)=>{
+        const btn = e.currentTarget;
+        const input = card.querySelector("[data-attach-input]");
+        if(!input.files || !input.files.length){ toast("Choose one or more PDF files first.", true); return; }
+        btn.disabled = true; btn.textContent = "📎 Uploading…";
+        try{
+          d.attachments = await uploadPdfAttachments(d.id, input.files, d.attachments || []);
+          input.value = "";
+          redrawAttachments();
+          if(d.id === currentQuoteId){ currentAttachments = d.attachments; renderAttachControls(); }
+          toast("PDF(s) attached.");
+        }catch(err){
+          toast("Upload failed: " + err.message, true);
+        }finally{
+          btn.disabled = false; btn.textContent = "📎 Attach PDF";
+        }
+      });
+    }
   });
   listEl.querySelectorAll(".mini-btn.load").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
@@ -2004,6 +2328,10 @@ async function loadWorkOrdersPage(force){
 // whichever was open, and finishing/reopening the last activity in a card
 // makes it leave the current tab, so the accordion auto-collapses.
 let expandedWoId = null;
+// Caches the linked quotation's attachments per quote id, fetched lazily
+// the first time a work order card is expanded (avoids an extra read per
+// card on every render).
+let quoteAttachmentsCache = {};
 
 // Writes the full details array back to Firestore and updates the local
 // cache in place, so the UI reflects the change immediately.
@@ -2094,6 +2422,26 @@ function renderWoTable(list){
       const body = document.createElement("div");
       body.className = "wo-card-body";
 
+      // Show the linked quotation's PDF attachments (view/download only —
+      // managing attachments happens on the Quotations page). Fetched
+      // lazily and cached the first time a card is expanded.
+      if(item.quote_doc_id){
+        const attachBox = document.createElement("div");
+        attachBox.className = "wo-activity";
+        attachBox.innerHTML = `<div class="wo-activity-desc">📎 Quotation Attachments</div><div data-wo-attach="${item.id}"></div>`;
+        body.appendChild(attachBox);
+        const target = attachBox.querySelector("[data-wo-attach]");
+        if(quoteAttachmentsCache.hasOwnProperty(item.quote_doc_id)){
+          renderAttachRows(target, quoteAttachmentsCache[item.quote_doc_id], null);
+        } else {
+          target.innerHTML = `<p style="font-size:12px;color:var(--ink-soft);margin:0;">Loading…</p>`;
+          db.collection(QUOTES_COLLECTION).doc(item.quote_doc_id).get().then(doc=>{
+            quoteAttachmentsCache[item.quote_doc_id] = (doc.exists && doc.data().attachments) || [];
+            if(expandedWoId === item.id) renderWoTable(woCache);
+          }).catch(()=>{ target.innerHTML = `<p style="font-size:12px;color:var(--ink-soft);margin:0;">Could not load attachments.</p>`; });
+        }
+      }
+
       // In the Pending tab, show only unfinished activities to act on; in
       // the Finished tab, show only finished ones with an Unfinish option.
       const relevant = details
@@ -2101,7 +2449,10 @@ function renderWoTable(list){
         .filter(({d}) => woViewMode === "finished" ? !!d.finish_date : !d.finish_date);
 
       if(!relevant.length){
-        body.innerHTML = `<div class="wo-empty-activities">${woViewMode === "finished" ? "No finished activities." : "No pending activities."}</div>`;
+        const emptyMsg = document.createElement("div");
+        emptyMsg.className = "wo-empty-activities";
+        emptyMsg.textContent = woViewMode === "finished" ? "No finished activities." : "No pending activities.";
+        body.appendChild(emptyMsg);
       } else {
         relevant.forEach(({d, idx})=>{
           const act = document.createElement("div");
