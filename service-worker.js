@@ -9,7 +9,7 @@
 const CACHE_NAME = "ngk-pricing-shell-v1";
 const APP_SHELL = [
   "./",
-  "./pricing-tool.html",
+  "./index.html",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
