@@ -649,9 +649,9 @@
         <div id="attachControls" style="display:none;">
           <label class="field"><span class="lab">Attach PDF file(s)</span><input type="file" id="attachFileInput" accept="application/pdf,.pdf" multiple></label>
           <div class="btn-row no-print" style="padding:10px 0 0;">
-            <button class="action" id="btnUploadAttach" type="button">📎 Upload</button>
+            <button class="action" id="btnUploadAttach" type="button" disabled>📎 Upload</button>
           </div>
-          <p id="attachStatus" style="font-size:11.5px;color:var(--ink-soft);margin:8px 0 0;"></p>
+          <p id="attachStatus" style="font-size:11.5px;color:var(--danger);margin:8px 0 0;min-height:14px;"></p>
           <div class="attach-list" id="attachList" style="margin-top:12px;"></div>
         </div>
       </div>
@@ -1108,7 +1108,7 @@ function formatBytes(n){
 // Each person attaching or removing a file will see a one-time Google
 // sign-in popup authorizing this app to manage files it creates in Drive.
 const GOOGLE_DRIVE_CLIENT_ID = "234237215523-5r80qj2jnuh4k2p1j67lv0o7thur4lq6.apps.googleusercontent.com";
-const GOOGLE_DRIVE_FOLDER_ID = "https://drive.google.com/drive/folders/1rwKhDJmeCfyfMP4Hzg44QwRw_UdtNVVO?usp=drive_link";
+const GOOGLE_DRIVE_FOLDER_ID = "1_LGCyGw8iNBMP70KLrzSMVit1YgXa3-L";
 const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 
 let gDriveTokenClient = null;
@@ -1120,13 +1120,37 @@ function driveConfigured(){
     && GOOGLE_DRIVE_FOLDER_ID && !GOOGLE_DRIVE_FOLDER_ID.startsWith("YOUR_");
 }
 
+// Error wrapper that keeps the raw underlying detail (HTTP status, Google's
+// error code/reason, the original response body) attached, and always logs
+// the full thing to the console immediately when created — so there's a
+// place to dig deeper than the one-line message shown in the UI.
+function DriveError(userMessage, detail){
+  const err = new Error(userMessage);
+  err.name = "DriveError";
+  err.detail = detail;
+  console.error("[Google Drive attachment error]", userMessage, detail || "");
+  return err;
+}
+
+// Builds a one-line-plus-detail string safe to show directly in the UI.
+function describeDriveError(err){
+  if(!err) return "Unknown error.";
+  let msg = err.message || String(err);
+  if(err.detail){
+    try{ msg += " — " + (typeof err.detail === "string" ? err.detail : JSON.stringify(err.detail)); }
+    catch(e){ /* ignore stringify failures */ }
+  }
+  return msg;
+}
+
 // Resolves with a valid access token, reusing a cached one if it hasn't
 // expired, otherwise triggering the Google consent popup. Must be called
 // from within a user gesture (a click handler) the first time.
 function getDriveAccessToken(){
   return new Promise((resolve, reject)=>{
     if(!driveConfigured()){
-      reject(new Error("Google Drive isn't set up yet — an admin needs to add the Client ID and folder ID."));
+      reject(DriveError("Google Drive isn't set up yet — an admin needs to add the Client ID and folder ID.",
+        {clientIdSet: driveConfigured(), clientId: GOOGLE_DRIVE_CLIENT_ID, folderId: GOOGLE_DRIVE_FOLDER_ID}));
       return;
     }
     if(gDriveAccessToken && Date.now() < gDriveTokenExpiry - 60000){
@@ -1134,7 +1158,8 @@ function getDriveAccessToken(){
       return;
     }
     if(!window.google || !google.accounts || !google.accounts.oauth2){
-      reject(new Error("Google sign-in hasn't finished loading yet — please try again in a moment."));
+      reject(DriveError("Google sign-in hasn't finished loading yet — please try again in a moment.",
+        {googleGlobalPresent: !!window.google}));
       return;
     }
     if(!gDriveTokenClient){
@@ -1145,12 +1170,19 @@ function getDriveAccessToken(){
       });
     }
     gDriveTokenClient.callback = (resp)=>{
-      if(resp.error){ reject(new Error(resp.error)); return; }
+      if(resp.error){
+        reject(DriveError(`Google sign-in failed (${resp.error}).`, resp));
+        return;
+      }
       gDriveAccessToken = resp.access_token;
       gDriveTokenExpiry = Date.now() + (resp.expires_in || 3600) * 1000;
       resolve(gDriveAccessToken);
     };
-    gDriveTokenClient.requestAccessToken({prompt: gDriveAccessToken ? "" : "consent"});
+    try{
+      gDriveTokenClient.requestAccessToken({prompt: gDriveAccessToken ? "" : "consent"});
+    }catch(err){
+      reject(DriveError("Could not open the Google sign-in popup.", {name: err.name, message: err.message}));
+    }
   });
 }
 
@@ -1173,49 +1205,64 @@ async function uploadFileToDrive(file, accessToken){
     `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n` +
     `--${boundary}\r\nContent-Type: application/pdf\r\nContent-Transfer-Encoding: base64\r\n\r\n${base64Data}\r\n` +
     `--${boundary}--`;
-  const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink,name", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + accessToken,
-      "Content-Type": `multipart/related; boundary=${boundary}`,
-    },
-    body,
-  });
+  let res;
+  try{
+    res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink,name", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + accessToken,
+        "Content-Type": `multipart/related; boundary=${boundary}`,
+      },
+      body,
+    });
+  }catch(networkErr){
+    throw DriveError("Network error reaching Google Drive — check your connection.", {name: networkErr.name, message: networkErr.message});
+  }
   if(!res.ok){
-    const err = await res.json().catch(()=>({}));
-    throw new Error((err.error && err.error.message) || `Upload failed (${res.status})`);
+    const body = await res.json().catch(()=>null);
+    const apiMsg = body && body.error && body.error.message;
+    const apiReason = body && body.error && body.error.errors && body.error.errors[0] && body.error.errors[0].reason;
+    throw DriveError(
+      `Drive upload failed for "${file.name}" (HTTP ${res.status}${apiReason ? ", " + apiReason : ""})${apiMsg ? ": " + apiMsg : ""}`,
+      {status: res.status, statusText: res.statusText, body}
+    );
   }
   return await res.json();
 }
 
 async function deleteFileFromDrive(fileId, accessToken){
-  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
-    method: "DELETE",
-    headers: {"Authorization": "Bearer " + accessToken},
-  });
+  let res;
+  try{
+    res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+      method: "DELETE",
+      headers: {"Authorization": "Bearer " + accessToken},
+    });
+  }catch(networkErr){
+    throw DriveError("Network error reaching Google Drive — check your connection.", {name: networkErr.name, message: networkErr.message});
+  }
   if(!res.ok && res.status !== 404){
-    const err = await res.json().catch(()=>({}));
-    throw new Error((err.error && err.error.message) || `Delete failed (${res.status})`);
+    const body = await res.json().catch(()=>null);
+    const apiMsg = body && body.error && body.error.message;
+    throw DriveError(`Drive delete failed (HTTP ${res.status})${apiMsg ? ": " + apiMsg : ""}`, {status: res.status, statusText: res.statusText, body});
   }
 }
 
 // Uploads a set of PDF files to the shared Drive folder, appends their
 // metadata to the quote's `attachments` array in Firestore, and returns the
 // resulting array. Skips non-PDF or oversized files with a toast.
+// Returns { list, failures } — `list` is the updated attachments array
+// (already saved to Firestore), `failures` is an array of full diagnostic
+// strings for any file that didn't make it, so the caller can show every
+// failure rather than losing detail behind a generic thrown error.
 async function uploadPdfAttachments(quoteId, files, existingAttachments){
   const result = (existingAttachments || []).slice();
   const MAX_SIZE = 10 * 1024 * 1024; // keep the base64 upload payload reasonable
-  let accessToken;
-  try{
-    accessToken = await getDriveAccessToken();
-  }catch(err){
-    toast("Google Drive: " + err.message, true);
-    return result;
-  }
+  const accessToken = await getDriveAccessToken(); // throws (with full detail) if sign-in itself fails
+  const failures = [];
   for(const file of Array.from(files)){
     const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
-    if(!isPdf){ toast(`Skipped "${file.name}" — only PDF files can be attached.`, true); continue; }
-    if(file.size > MAX_SIZE){ toast(`Skipped "${file.name}" — PDFs must be under 10 MB.`, true); continue; }
+    if(!isPdf){ failures.push(`"${file.name}": only PDF files can be attached.`); continue; }
+    if(file.size > MAX_SIZE){ failures.push(`"${file.name}": PDFs must be under 10 MB.`); continue; }
     try{
       const uploaded = await uploadFileToDrive(file, accessToken);
       result.push({
@@ -1226,20 +1273,27 @@ async function uploadPdfAttachments(quoteId, files, existingAttachments){
         uploaded_at: new Date().toISOString()
       });
     }catch(err){
-      toast(`Failed to upload "${file.name}": ` + err.message, true);
+      failures.push(`"${file.name}": ${describeDriveError(err)}`);
     }
   }
-  await db.collection(QUOTES_COLLECTION).doc(quoteId).update({attachments: result});
-  return result;
+  try{
+    await db.collection(QUOTES_COLLECTION).doc(quoteId).update({attachments: result});
+  }catch(err){
+    throw DriveError("Files may have reached Drive but saving the record to Firestore failed.",
+      {name: err.name, message: err.message, code: err.code});
+  }
+  return {list: result, failures};
 }
 
 async function deletePdfAttachment(quoteId, attachment, currentList){
   try{
     const accessToken = await getDriveAccessToken();
     if(attachment.driveFileId) await deleteFileFromDrive(attachment.driveFileId, accessToken);
-  }catch(e){
-    // Still remove the record even if the Drive delete itself fails (e.g.
-    // token issue, or someone else already deleted the file in Drive).
+  }catch(err){
+    // Log it for investigation, but still remove the record below even if
+    // the Drive delete itself fails (e.g. token issue, or someone already
+    // deleted the file directly in Drive) — otherwise it'd be stuck forever.
+    console.error("[Google Drive attachment error] delete failed, removing record anyway —", describeDriveError(err));
   }
   const result = currentList.filter(a => a.driveFileId !== attachment.driveFileId);
   await db.collection(QUOTES_COLLECTION).doc(quoteId).update({attachments: result});
@@ -1278,6 +1332,7 @@ function renderAttachControls(){
   }
   needsSave.style.display = "none";
   controls.style.display = "block";
+  $("btnUploadAttach").disabled = !($("attachFileInput").files && $("attachFileInput").files.length);
   renderAttachRows($("attachList"), currentAttachments, async (a)=>{
     if(!confirm(`Remove "${a.name}"? This cannot be undone.`)) return;
     try{
@@ -1285,31 +1340,52 @@ function renderAttachControls(){
       renderAttachControls();
       toast("Attachment removed.");
     }catch(err){
-      toast("Remove failed: " + err.message, true);
+      console.error("[Attachment remove error]", err);
+      toast("Remove failed: " + describeDriveError(err), true);
     }
   });
 }
+
+// Keep the Upload button disabled until at least one file is actually
+// chosen, so the "no file selected" case is avoided rather than just
+// reported after the fact.
+$("attachFileInput").addEventListener("change", ()=>{
+  $("btnUploadAttach").disabled = !($("attachFileInput").files && $("attachFileInput").files.length);
+  $("attachStatus").textContent = "";
+});
 
 $("btnUploadAttach").addEventListener("click", async ()=>{
   if(!currentQuoteId) return;
   const input = $("attachFileInput");
   if(!input.files || !input.files.length){
-    toast("Choose one or more PDF files first.", true);
+    $("attachStatus").textContent = "No file selected — choose a PDF first, then click Upload.";
+    toast("No file selected — choose a PDF first.", true);
     return;
   }
   const btn = $("btnUploadAttach");
   btn.disabled = true; btn.textContent = "📎 Uploading…";
   $("attachStatus").textContent = "";
+  $("attachStatus").style.color = "";
   try{
-    currentAttachments = await uploadPdfAttachments(currentQuoteId, input.files, currentAttachments);
+    const {list, failures} = await uploadPdfAttachments(currentQuoteId, input.files, currentAttachments);
+    currentAttachments = list;
     input.value = "";
     renderAttachControls();
-    toast("PDF(s) attached.");
     quotesCache = null;
+    if(failures.length){
+      $("attachStatus").style.color = "var(--danger)";
+      $("attachStatus").textContent = failures.join(" | ");
+      toast(`${failures.length} file(s) failed — see details below the upload button.`, true);
+    } else {
+      toast("PDF(s) attached.");
+    }
   }catch(err){
-    $("attachStatus").textContent = "Upload failed: " + err.message;
+    $("attachStatus").style.color = "var(--danger)";
+    $("attachStatus").textContent = describeDriveError(err);
+    toast("Upload failed — see details below the upload button.", true);
   }finally{
-    btn.disabled = false; btn.textContent = "📎 Upload";
+    btn.disabled = ($("attachFileInput").files && $("attachFileInput").files.length) ? false : true;
+    btn.textContent = "📎 Upload";
   }
 });
 
@@ -1981,7 +2057,8 @@ function renderQuotesTable(list){
         ${quotationsCanEdit ? `
           <div class="quote-card-attach-add">
             <input type="file" accept="application/pdf,.pdf" multiple data-attach-input="${d.id}">
-            <button class="mini-btn" data-attach-upload="${d.id}" style="margin-top:6px;">📎 Attach PDF</button>
+            <button class="mini-btn" data-attach-upload="${d.id}" style="margin-top:6px;" disabled>📎 Attach PDF</button>
+            <p class="attach-inline-error" data-attach-error="${d.id}" style="display:none;color:var(--danger);font-size:11px;margin:4px 0 0;"></p>
           </div>` : ""}
       </div>`;
     listEl.appendChild(card);
@@ -1996,28 +2073,50 @@ function renderQuotesTable(list){
           if(d.id === currentQuoteId){ currentAttachments = d.attachments; renderAttachControls(); }
           toast("Attachment removed.");
         }catch(err){
-          toast("Remove failed: " + err.message, true);
+          console.error("[Attachment remove error]", err);
+          toast("Remove failed: " + describeDriveError(err), true);
         }
       } : null);
     };
     redrawAttachments();
 
     if(quotationsCanEdit){
-      card.querySelector("[data-attach-upload]").addEventListener("click", async (e)=>{
-        const btn = e.currentTarget;
-        const input = card.querySelector("[data-attach-input]");
-        if(!input.files || !input.files.length){ toast("Choose one or more PDF files first.", true); return; }
-        btn.disabled = true; btn.textContent = "📎 Uploading…";
+      const uploadBtn = card.querySelector("[data-attach-upload]");
+      const fileInput = card.querySelector("[data-attach-input]");
+      const errorEl = card.querySelector("[data-attach-error]");
+      fileInput.addEventListener("change", ()=>{
+        uploadBtn.disabled = !(fileInput.files && fileInput.files.length);
+        errorEl.style.display = "none";
+      });
+      uploadBtn.addEventListener("click", async ()=>{
+        if(!fileInput.files || !fileInput.files.length){
+          errorEl.textContent = "No file selected — choose a PDF first, then click Attach PDF.";
+          errorEl.style.display = "block";
+          toast("No file selected — choose a PDF first.", true);
+          return;
+        }
+        errorEl.style.display = "none";
+        uploadBtn.disabled = true; uploadBtn.textContent = "📎 Uploading…";
         try{
-          d.attachments = await uploadPdfAttachments(d.id, input.files, d.attachments || []);
-          input.value = "";
+          const {list, failures} = await uploadPdfAttachments(d.id, fileInput.files, d.attachments || []);
+          d.attachments = list;
+          fileInput.value = "";
           redrawAttachments();
           if(d.id === currentQuoteId){ currentAttachments = d.attachments; renderAttachControls(); }
-          toast("PDF(s) attached.");
+          if(failures.length){
+            errorEl.textContent = failures.join(" | ");
+            errorEl.style.display = "block";
+            toast(`${failures.length} file(s) failed — see details on the card.`, true);
+          } else {
+            toast("PDF(s) attached.");
+          }
         }catch(err){
-          toast("Upload failed: " + err.message, true);
+          errorEl.textContent = describeDriveError(err);
+          errorEl.style.display = "block";
+          toast("Upload failed — see details on the card.", true);
         }finally{
-          btn.disabled = false; btn.textContent = "📎 Attach PDF";
+          uploadBtn.disabled = (fileInput.files && fileInput.files.length) ? false : true;
+          uploadBtn.textContent = "📎 Attach PDF";
         }
       });
     }
@@ -2438,7 +2537,10 @@ function renderWoTable(list){
           db.collection(QUOTES_COLLECTION).doc(item.quote_doc_id).get().then(doc=>{
             quoteAttachmentsCache[item.quote_doc_id] = (doc.exists && doc.data().attachments) || [];
             if(expandedWoId === item.id) renderWoTable(woCache);
-          }).catch(()=>{ target.innerHTML = `<p style="font-size:12px;color:var(--ink-soft);margin:0;">Could not load attachments.</p>`; });
+          }).catch(err=>{
+            console.error("[Work Order attachments load error]", err);
+            target.innerHTML = `<p style="font-size:12px;color:var(--danger);margin:0;">Could not load attachments: ${err.message || err}</p>`;
+          });
         }
       }
 
