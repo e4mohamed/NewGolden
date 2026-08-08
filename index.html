@@ -75,6 +75,16 @@
     display:flex;align-items:center;gap:8px;font-size:11.5px;color:#d6eaf8;
   }
   .user-chip .mini-btn{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.3);color:#fff;}
+  .install-btn{background:var(--green) !important;border-color:var(--green) !important;color:#fff !important;font-weight:700;white-space:nowrap;}
+  .install-btn:hover{filter:brightness(1.1);}
+  .ios-install-hint{
+    background:var(--accent-bg);border-bottom:1px solid #9fc0dd;color:var(--blue);
+    padding:10px 20px;font-size:12.5px;text-align:center;position:relative;
+  }
+  .ios-install-hint button{
+    position:absolute;right:14px;top:50%;transform:translateY(-50%);
+    background:none;border:none;color:var(--blue);font-size:14px;cursor:pointer;padding:4px;
+  }
 
   /* ---------- Login screen ---------- */
   #loginScreen{
@@ -471,8 +481,8 @@
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-mark">NGK</div>
-    <h1>New Golden Key</h1>
-    <p class="login-sub">Sign in to the pricing tool</p>
+    <h1>New Golden Key App</h1>
+    <p class="login-sub">Sign in</p>
     <form id="loginForm">
       <label class="field"><span class="lab">Email</span><input type="email" id="loginEmail" autocomplete="username" required></label>
       <label class="field" style="margin-top:10px;"><span class="lab">Password</span><input type="password" id="loginPassword" autocomplete="current-password" required></label>
@@ -498,12 +508,17 @@
       Quotation Ref: <b id="refDisplay">Q1/ht/01/2026</b><br>
       Revision <b id="revDisplay">00</b>
     </div>
+    <button class="mini-btn install-btn" id="btnInstallApp" type="button" style="display:none;">📲 Install App</button>
     <div class="user-chip">
       <span id="userChipText">—</span>
       <button class="mini-btn" id="btnSignOut" type="button">Sign Out</button>
     </div>
   </div>
 </header>
+<div id="iosInstallHint" class="ios-install-hint no-print" style="display:none;">
+  📲 To install: tap the <b>Share</b> button, then <b>Add to Home Screen</b>.
+  <button id="btnDismissIosHint" type="button" aria-label="Dismiss">✕</button>
+</div>
 
 <nav class="pagenav no-print">
   <button class="tab active" data-page="calc" type="button">Calculator</button>
@@ -641,10 +656,7 @@
     <section class="card panel">
       <div class="card-head"><span class="idx">9</span><h2>Revision &amp; Export</h2></div>
       <div class="card-body">
-        <div class="workflow-box" id="workflowBox">📋 WORKFLOW:
-• New quotation — fill in the form and click "Save to Firebase". The reference (Q1/ht/mm/yyyy) is generated automatically: the number after "Q" is the next free number for this month, the letters are from the Item Type, and Rev starts at 00.
-• Editing a quotation — open it from the Quotations tab, then change anything here. The reference stays the same, and the revision only advances (Rev 01, Rev 02, …) if something actually changed since it was loaded.
-• Click "Start New Quotation" below to detach from the loaded quotation and begin a fresh one.</div>
+        
         <div class="grid cols-2">
           <label class="field"><span class="lab">Revision</span><small>auto — advances only on real edits to a loaded quotation</small><input type="text" id="revisionNo" value="00" readonly></label>
           <label class="field"><span class="lab">Quote No.</span><small>auto — next free number this month</small><input type="text" id="quoteSeq" value="1" readonly></label>
@@ -692,7 +704,7 @@
 
       <div class="btn-row no-print">
         <button class="action" id="btnPrint" type="button">🖨 Print / Save as PDF</button>
-        <button class="action green" id="btnSaveFb" type="button">☁ Save to Firebase</button>
+        <button class="action green" id="btnSaveFb" type="button">☁ Save</button>
       </div>
     </div>
   </aside>
@@ -2956,6 +2968,47 @@ if ("serviceWorker" in navigator){
     });
   });
 }
+
+// ---- In-app Install button ----
+// The browser's own install affordance (address-bar icon, or a menu item)
+// isn't part of this page and can't be styled or moved — and Chrome only
+// shows it once its own engagement heuristics are satisfied, which can take
+// a while or vary by visit. This button gives a guaranteed, visible way to
+// trigger the same install flow the moment the browser says it's available.
+let deferredInstallPrompt = null;
+const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+
+window.addEventListener("beforeinstallprompt", (e)=>{
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if(!isStandalone) $("btnInstallApp").style.display = "inline-flex";
+});
+
+$("btnInstallApp").addEventListener("click", async ()=>{
+  if(!deferredInstallPrompt) return;
+  $("btnInstallApp").style.display = "none";
+  deferredInstallPrompt.prompt();
+  try{ await deferredInstallPrompt.userChoice; }catch(e){}
+  deferredInstallPrompt = null;
+});
+
+window.addEventListener("appinstalled", ()=>{
+  $("btnInstallApp").style.display = "none";
+  $("iosInstallHint").style.display = "none";
+});
+
+// iOS Safari never fires beforeinstallprompt — it has no programmatic
+// install trigger at all, so the only option is a manual instructions hint
+// pointing at the Share sheet.
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isSafari = /^((?!chrome|crios|fxios|android).)*safari/i.test(navigator.userAgent);
+if(isIOS && isSafari && !isStandalone && !sessionStorage.getItem("iosInstallHintDismissed")){
+  $("iosInstallHint").style.display = "block";
+}
+$("btnDismissIosHint").addEventListener("click", ()=>{
+  $("iosInstallHint").style.display = "none";
+  sessionStorage.setItem("iosInstallHintDismissed", "1");
+});
 </script>
 </body>
 </html>
