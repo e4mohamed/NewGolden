@@ -461,7 +461,7 @@
   <div class="login-card">
     <div class="login-mark">NGK</div>
     <h1>New Golden Key</h1>
-    <p class="login-sub">Sign in</p>
+    <p class="login-sub">Sign in to the pricing tool</p>
     <form id="loginForm">
       <label class="field"><span class="lab">Email</span><input type="email" id="loginEmail" autocomplete="username" required></label>
       <label class="field" style="margin-top:10px;"><span class="lab">Password</span><input type="password" id="loginPassword" autocomplete="current-password" required></label>
@@ -650,7 +650,9 @@
           <label class="field"><span class="lab">Attach PDF file(s)</span><input type="file" id="attachFileInput" accept="application/pdf,.pdf" multiple></label>
           <div class="btn-row no-print" style="padding:10px 0 0;">
             <button class="action" id="btnUploadAttach" type="button" disabled>📎 Upload</button>
+            <button class="action secondary" id="btnSwitchGoogleAccount" type="button">🔄 Switch Google Account</button>
           </div>
+          <p style="font-size:11px;color:var(--ink-soft);margin:6px 0 0;">If uploads say "File not found," it usually means you're signed into the wrong Google account for Drive — use the button above to pick a different one.</p>
           <p id="attachStatus" style="font-size:11.5px;color:var(--danger);margin:8px 0 0;min-height:14px;"></p>
           <div class="attach-list" id="attachList" style="margin-top:12px;"></div>
         </div>
@@ -1190,7 +1192,13 @@ function getDriveAccessToken(){
       resolve(gDriveAccessToken);
     };
     try{
-      gDriveTokenClient.requestAccessToken({prompt: gDriveAccessToken ? "" : "consent"});
+      // Always show Google's account picker on a fresh sign-in (rather than
+      // silently reusing whatever Google session happens to already be
+      // active in the browser) — this matters a lot when the Drive folder
+      // belongs to a different Google account than whoever set up Firebase,
+      // since the wrong account here looks exactly like a missing/wrong
+      // folder ID (a 404 "File not found").
+      gDriveTokenClient.requestAccessToken({prompt: gDriveAccessToken ? "" : "select_account consent"});
     }catch(err){
       reject(DriveError("Could not open the Google sign-in popup.", {name: err.name, message: err.message}));
     }
@@ -1363,6 +1371,14 @@ function renderAttachControls(){
 $("attachFileInput").addEventListener("change", ()=>{
   $("btnUploadAttach").disabled = !($("attachFileInput").files && $("attachFileInput").files.length);
   $("attachStatus").textContent = "";
+});
+
+// Clears the cached Drive token so the next upload/remove forces a fresh
+// account picker — the fix for "signed into the wrong Google account".
+$("btnSwitchGoogleAccount").addEventListener("click", ()=>{
+  gDriveAccessToken = null;
+  gDriveTokenExpiry = 0;
+  toast("Cleared — the next attach or remove will ask you to choose a Google account.");
 });
 
 $("btnUploadAttach").addEventListener("click", async ()=>{
