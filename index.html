@@ -461,7 +461,7 @@
   <div class="login-card">
     <div class="login-mark">NGK</div>
     <h1>New Golden Key</h1>
-    <p class="login-sub">Sign in to the pricing tool</p>
+    <p class="login-sub">Sign in</p>
     <form id="loginForm">
       <label class="field"><span class="lab">Email</span><input type="email" id="loginEmail" autocomplete="username" required></label>
       <label class="field" style="margin-top:10px;"><span class="lab">Password</span><input type="password" id="loginPassword" autocomplete="current-password" required></label>
@@ -1218,7 +1218,7 @@ async function uploadFileToDrive(file, accessToken){
     `--${boundary}--`;
   let res;
   try{
-    res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink,name", {
+    res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,webViewLink,name", {
       method: "POST",
       headers: {
         "Authorization": "Bearer " + accessToken,
@@ -1244,7 +1244,7 @@ async function uploadFileToDrive(file, accessToken){
 async function deleteFileFromDrive(fileId, accessToken){
   let res;
   try{
-    res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+    res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?supportsAllDrives=true`, {
       method: "DELETE",
       headers: {"Authorization": "Bearer " + accessToken},
     });
