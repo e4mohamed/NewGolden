@@ -1106,10 +1106,21 @@ function formatBytes(n){
 //      access — e.g. "Anyone at yourcompany.com with the link"), then copy
 //      the folder id from its URL: drive.google.com/drive/folders/<ID>.
 // Each person attaching or removing a file will see a one-time Google
-// sign-in popup authorizing this app to manage files it creates in Drive.
+// sign-in popup authorizing this app.
+//
+// Scope note: this uses the full "drive" scope (read/write anywhere in the
+// signed-in user's Drive), not the narrower "drive.file" scope — drive.file
+// only grants access to files/folders the app itself created or that the
+// user explicitly picked via Google's file picker, so it can't write into
+// an existing shared folder just because it's been shared with someone
+// (you'd see "File not found" for the folder ID if you tried). Because
+// this scope is broader, on an External OAuth consent screen keep
+// Publishing status set to "Testing" with your team added as test users
+// (or use "Internal" if this is a Google Workspace account) — that avoids
+// Google's app-verification review, which otherwise applies to this scope.
 const GOOGLE_DRIVE_CLIENT_ID = "234237215523-5r80qj2jnuh4k2p1j67lv0o7thur4lq6.apps.googleusercontent.com";
 const GOOGLE_DRIVE_FOLDER_ID = "1_LGCyGw8iNBMP70KLrzSMVit1YgXa3-L";
-const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
 
 let gDriveTokenClient = null;
 let gDriveAccessToken = null;
