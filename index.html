@@ -483,7 +483,7 @@
   <div class="login-card">
     <div class="login-mark">NGK</div>
     <h1>New Golden Key</h1>
-    <p class="login-sub">Sign in to the pricing tool</p>
+    <p class="login-sub">Sign in</p>
     <form id="loginForm">
       <label class="field"><span class="lab">Email</span><input type="email" id="loginEmail" autocomplete="username" required></label>
       <label class="field" style="margin-top:10px;"><span class="lab">Password</span><input type="password" id="loginPassword" autocomplete="current-password" required></label>
@@ -657,10 +657,7 @@
     <section class="card panel">
       <div class="card-head"><span class="idx">9</span><h2>Revision &amp; Export</h2></div>
       <div class="card-body">
-        <div class="workflow-box" id="workflowBox">📋 WORKFLOW:
-• New quotation — fill in the form and click "Save to Firebase". The reference (Q1/ht/mm/yyyy) is generated automatically: the number after "Q" is the next free number for this month, the letters are from the Item Type, and Rev starts at 00.
-• Editing a quotation — open it from the Quotations tab, then change anything here. The reference stays the same, and the revision only advances (Rev 01, Rev 02, …) if something actually changed since it was loaded.
-• Click "Start New Quotation" below to detach from the loaded quotation and begin a fresh one.</div>
+        
         <div class="grid cols-2">
           <label class="field"><span class="lab">Revision</span><small>auto — advances only on real edits to a loaded quotation</small><input type="text" id="revisionNo" value="00" readonly></label>
           <label class="field"><span class="lab">Quote No.</span><small>auto — next free number this month</small><input type="text" id="quoteSeq" value="1" readonly></label>
@@ -672,7 +669,7 @@
     <section class="card panel">
       <div class="card-head"><span class="idx">10</span><h2>Attachments (PDF)</h2></div>
       <div class="card-body">
-        <div id="attachNeedsSaveNote" class="note-box">Save this quotation first — once it exists in Firebase, you can attach PDF files to it here.</div>
+        <div id="attachNeedsSaveNote" class="note-box">Save this quotation first, you can attach PDF files to it here.</div>
         <div id="attachControls" style="display:none;">
           <label class="field"><span class="lab">Attach PDF file(s)</span><input type="file" id="attachFileInput" accept="application/pdf,.pdf" multiple></label>
           <div class="btn-row no-print" style="padding:10px 0 0;">
@@ -708,7 +705,7 @@
 
       <div class="btn-row no-print">
         <button class="action" id="btnPrint" type="button">🖨 Print / Save as PDF</button>
-        <button class="action green" id="btnSaveFb" type="button">☁ Save to Firebase</button>
+        <button class="action green" id="btnSaveFb" type="button">☁ Save</button>
       </div>
     </div>
   </aside>
