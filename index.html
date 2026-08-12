@@ -748,6 +748,7 @@
       <label class="field"><span class="lab">Client</span><input type="text" id="woClient" readonly></label>
       <label class="field"><span class="lab">Quote No.</span><input type="text" id="woQuoteNoDisplay" readonly></label>
     </div>
+    <div id="woTechSummaryBox" class="note-box" style="display:none;margin-top:12px;font-size:12.5px;line-height:1.6;"></div>
 
     <div style="overflow-x:auto;">
       <table class="wo-details" id="woDetailsTbl">
@@ -2397,6 +2398,7 @@ async function startWorkOrderFromQuote(item){
   sel.value = item.id;
   $("woClient").value = item.client_name || "—";
   $("woQuoteNoDisplay").value = item.quotation_no || item.id;
+  updateWoTechSummaryBox(item);
   woDetails = buildActivityRowsFromQuote(item);
   renderWoDetailRows();
   $("woFormPanel").style.display = "block";
@@ -2502,12 +2504,23 @@ async function refreshOpenQuotesForLinking(){
   }
 }
 
+// Shows/hides the technical-summary box in the create/edit form. `q` is a
+// quotation's own data (dimensions, thicknesses, waterproofing — no prices).
+function updateWoTechSummaryBox(q){
+  const box = $("woTechSummaryBox");
+  const summary = q ? buildTechnicalSummary(q) : "";
+  if(!summary){ box.style.display = "none"; box.innerHTML = ""; return; }
+  box.innerHTML = `<b>📐 Technical Summary</b><br>${summary}`;
+  box.style.display = "block";
+}
+
 $("woQuoteSelect").addEventListener("change", ()=>{
   const id = $("woQuoteSelect").value;
   const q = (openQuotesCache || []).find(x=>x.id === id);
   if(q){
     $("woClient").value = q.client_name || "—";
     $("woQuoteNoDisplay").value = q.quotation_no || q.id;
+    updateWoTechSummaryBox(q);
     // Only auto-fill activities for a brand-new work order — never overwrite
     // progress already recorded while editing an existing one (the select is
     // disabled in that case anyway).
@@ -2518,6 +2531,7 @@ $("woQuoteSelect").addEventListener("change", ()=>{
   } else {
     $("woClient").value = "";
     $("woQuoteNoDisplay").value = "";
+    updateWoTechSummaryBox(null);
   }
 });
 
@@ -2531,6 +2545,7 @@ function resetWoForm(){
   $("woQuoteSelect").value = "";
   $("woClient").value = "";
   $("woQuoteNoDisplay").value = "";
+  updateWoTechSummaryBox(null);
   $("woFormTitle").textContent = "Create Work Order";
   $("btnSaveWO").textContent = "💾 Save Work Order";
   $("woStatus").textContent = "";
@@ -2635,10 +2650,42 @@ async function loadWorkOrdersPage(force){
 // whichever was open, and finishing/reopening the last activity in a card
 // makes it leave the current tab, so the accordion auto-collapses.
 let expandedWoId = null;
-// Caches the linked quotation's attachments per quote id, fetched lazily
-// the first time a work order card is expanded (avoids an extra read per
-// card on every render).
-let quoteAttachmentsCache = {};
+// Caches the linked quotation's own data (attachments + technical fields)
+// per quote id, fetched lazily the first time a work order card is
+// expanded (avoids an extra read per card on every render).
+let linkedQuoteDataCache = {};
+
+// A brief, technical-only summary of a quotation — dimensions, thicknesses,
+// waterproofing, separation wall — deliberately excluding every price/cost
+// field, for display on the Work Orders page where crews shouldn't need to
+// see (or be distracted by) financial data.
+function buildTechnicalSummary(q){
+  if(!q) return "";
+  const lines = [];
+  const L=q.length, W=q.width, H=q.height;
+  let head = q.item_type || "";
+  if(L && W && H){
+    const volL = Math.round(L*W*H*1000).toLocaleString('en-US');
+    head += (head ? " — " : "") + `Internal ${fmt(L)} × ${fmt(W)} × ${fmt(H)} m (${volL} L)`;
+  }
+  if(head) lines.push(head);
+
+  const thick = [];
+  if(q.foundation) thick.push(`Foundation ${fmt(q.foundation)} m`);
+  if(q.wall) thick.push(`Wall ${fmt(q.wall)} m`);
+  if(q.slab) thick.push(`Slab ${fmt(q.slab)} m`);
+  if(thick.length) lines.push(thick.join(" · "));
+
+  const wp = [];
+  if(q.internal_type) wp.push(`Internal WP: ${q.internal_type}`);
+  if(q.external_type) wp.push(`External WP: ${q.external_type}`);
+  if(wp.length) lines.push(wp.join(" · "));
+
+  if(q.sep_wall_width && q.sep_wall_height && q.sep_wall_thickness){
+    lines.push(`Separation Wall: ${fmt(q.sep_wall_width)} × ${fmt(q.sep_wall_height)} × ${fmt(q.sep_wall_thickness)} m`);
+  }
+  return lines.join("<br>");
+}
 
 // Writes the full details array back to Firestore and updates the local
 // cache in place, so the UI reflects the change immediately.
@@ -2750,25 +2797,38 @@ function renderWoTable(list){
       const body = document.createElement("div");
       body.className = "wo-card-body";
 
-      // Show the linked quotation's PDF attachments (view/download only —
-      // managing attachments happens on the Quotations page). Fetched
-      // lazily and cached the first time a card is expanded.
+      // Show a brief technical summary of the linked quotation (dimensions,
+      // thicknesses, waterproofing — no prices) plus its PDF attachments
+      // (view/download only — managing attachments happens on the
+      // Quotations page). Both come from one lazily-fetched, cached read
+      // of the quote doc, done once the first time a card is expanded.
       if(item.quote_doc_id){
+        const techBox = document.createElement("div");
+        techBox.className = "wo-activity";
+        techBox.innerHTML = `<div class="wo-activity-desc">📐 Technical Summary</div><div data-wo-tech="${item.id}" style="font-size:12.5px;color:var(--ink-soft);line-height:1.6;"></div>`;
+        body.appendChild(techBox);
+
         const attachBox = document.createElement("div");
         attachBox.className = "wo-activity";
         attachBox.innerHTML = `<div class="wo-activity-desc">📎 Quotation Attachments</div><div data-wo-attach="${item.id}"></div>`;
         body.appendChild(attachBox);
-        const target = attachBox.querySelector("[data-wo-attach]");
-        if(quoteAttachmentsCache.hasOwnProperty(item.quote_doc_id)){
-          renderAttachRows(target, quoteAttachmentsCache[item.quote_doc_id], null);
+
+        const techTarget = techBox.querySelector("[data-wo-tech]");
+        const attachTarget = attachBox.querySelector("[data-wo-attach]");
+        if(linkedQuoteDataCache.hasOwnProperty(item.quote_doc_id)){
+          const qd = linkedQuoteDataCache[item.quote_doc_id];
+          techTarget.innerHTML = buildTechnicalSummary(qd) || `<span style="font-style:italic;">No technical details on file.</span>`;
+          renderAttachRows(attachTarget, qd ? qd.attachments : [], null);
         } else {
-          target.innerHTML = `<p style="font-size:12px;color:var(--ink-soft);margin:0;">Loading…</p>`;
+          techTarget.innerHTML = `<span style="font-style:italic;">Loading…</span>`;
+          attachTarget.innerHTML = `<p style="font-size:12px;color:var(--ink-soft);margin:0;">Loading…</p>`;
           db.collection(QUOTES_COLLECTION).doc(item.quote_doc_id).get().then(doc=>{
-            quoteAttachmentsCache[item.quote_doc_id] = (doc.exists && doc.data().attachments) || [];
+            linkedQuoteDataCache[item.quote_doc_id] = doc.exists ? doc.data() : null;
             if(expandedWoId === item.id) renderWoTable(woCache);
           }).catch(err=>{
-            console.error("[Work Order attachments load error]", err);
-            target.innerHTML = `<p style="font-size:12px;color:var(--danger);margin:0;">Could not load attachments: ${err.message || err}</p>`;
+            console.error("[Work Order linked-quote load error]", err);
+            techTarget.innerHTML = `<span style="color:var(--danger);">Could not load: ${err.message || err}</span>`;
+            attachTarget.innerHTML = `<p style="font-size:12px;color:var(--danger);margin:0;">Could not load attachments: ${err.message || err}</p>`;
           });
         }
       }
@@ -2852,6 +2912,7 @@ function renderWoTable(list){
         });
         $("woClient").value = item.client_name || "";
         $("woQuoteNoDisplay").value = item.quote_no || "";
+        updateWoTechSummaryBox(item.quote_doc_id ? linkedQuoteDataCache[item.quote_doc_id] : null);
         $("woFormTitle").textContent = "Editing Work Order";
         $("btnSaveWO").textContent = "💾 Update Work Order";
         $("woStatus").textContent = `Linked quotation ${item.quote_no} is locked and can't be edited or deleted.`;
