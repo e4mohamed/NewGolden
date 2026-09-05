@@ -483,7 +483,7 @@
   <div class="login-card">
     <div class="login-mark">NGK</div>
     <h1>New Golden Key</h1>
-    <p class="login-sub">Sign in</p>
+    <p class="login-sub">Sign in to the pricing tool</p>
     <form id="loginForm">
       <label class="field"><span class="lab">Email</span><input type="email" id="loginEmail" autocomplete="username" required></label>
       <label class="field" style="margin-top:10px;"><span class="lab">Password</span><input type="password" id="loginPassword" autocomplete="current-password" required></label>
@@ -657,7 +657,10 @@
     <section class="card panel">
       <div class="card-head"><span class="idx">9</span><h2>Revision &amp; Export</h2></div>
       <div class="card-body">
-        
+        <div class="workflow-box" id="workflowBox">📋 WORKFLOW:
+• New quotation — fill in the form and click "Save to Firebase". The reference (Q1/ht/mm/yyyy) is generated automatically: the number after "Q" is the next free number for this month, the letters are from the Item Type, and Rev starts at 00.
+• Editing a quotation — open it from the Quotations tab, then change anything here. The reference stays the same, and the revision only advances (Rev 01, Rev 02, …) if something actually changed since it was loaded.
+• Click "Start New Quotation" below to detach from the loaded quotation and begin a fresh one.</div>
         <div class="grid cols-2">
           <label class="field"><span class="lab">Revision</span><small>auto — advances only on real edits to a loaded quotation</small><input type="text" id="revisionNo" value="00" readonly></label>
           <label class="field"><span class="lab">Quote No.</span><small>auto — next free number this month</small><input type="text" id="quoteSeq" value="1" readonly></label>
@@ -669,7 +672,7 @@
     <section class="card panel">
       <div class="card-head"><span class="idx">10</span><h2>Attachments (PDF)</h2></div>
       <div class="card-body">
-        <div id="attachNeedsSaveNote" class="note-box">Save this quotation first, you can attach PDF files to it here.</div>
+        <div id="attachNeedsSaveNote" class="note-box">Save this quotation first — once it exists in Firebase, you can attach PDF files to it here.</div>
         <div id="attachControls" style="display:none;">
           <label class="field"><span class="lab">Attach PDF file(s)</span><input type="file" id="attachFileInput" accept="application/pdf,.pdf" multiple></label>
           <div class="btn-row no-print" style="padding:10px 0 0;">
@@ -705,7 +708,7 @@
 
       <div class="btn-row no-print">
         <button class="action" id="btnPrint" type="button">🖨 Print / Save as PDF</button>
-        <button class="action green" id="btnSaveFb" type="button">☁ Save</button>
+        <button class="action green" id="btnSaveFb" type="button">☁ Save to Firebase</button>
       </div>
     </div>
   </aside>
@@ -713,9 +716,10 @@
 
 <!-- ================= PAGE 2: QUOTATIONS ================= -->
 <main class="quotes-page panel no-print" id="page-quotes" style="display:none;">
-  <div class="wo-subtabs no-print">
+  <div class="wo-subtabs no-print" id="quoteViewSubtabs">
     <button class="subtab active" data-quote-view="open" type="button">🆕 New / Open</button>
-    <button class="subtab" data-quote-view="other" type="button">📁 Other Status</button>
+    <button class="subtab" data-quote-view="production" type="button">🚧 In Production</button>
+    <button class="subtab" data-quote-view="delivered" type="button">📦 Delivered</button>
   </div>
   <div class="quotes-toolbar">
     <input type="search" id="quotesSearch" placeholder="Search by ref, client, or location…">
@@ -2079,12 +2083,12 @@ document.querySelectorAll("nav.pagenav .tab").forEach(btn=>{
 
 // ================= QUOTATIONS PAGE =================
 let quotesCache = null;
-let quoteViewMode = "open";   // "open" = grid of cards; "other" = accordion, like Work Orders
-let expandedQuoteId = null;   // single-expand accordion state for the "other status" group
+let quoteViewMode = "open";   // "open" = grid of cards; "production"/"delivered" = accordion, like Work Orders
+let expandedQuoteId = null;   // single-expand accordion state for the production/delivered tabs
 
-document.querySelectorAll('#page-quotes .wo-subtabs .subtab').forEach(btn=>{
+document.querySelectorAll('#quoteViewSubtabs .subtab').forEach(btn=>{
   btn.addEventListener("click", ()=>{
-    document.querySelectorAll('#page-quotes .wo-subtabs .subtab').forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll('#quoteViewSubtabs .subtab').forEach(b=>b.classList.remove("active"));
     btn.classList.add("active");
     quoteViewMode = btn.dataset.quoteView;
     expandedQuoteId = null;
@@ -2298,8 +2302,9 @@ function renderQuotesTable(list){
   const count = $("quotesCount");
 
   const byView = list.filter(d => {
-    const isOther = d.status === "Work Order" || d.status === "Delivered";
-    return quoteViewMode === "open" ? !isOther : isOther;
+    if(quoteViewMode === "production") return d.status === "Work Order";
+    if(quoteViewMode === "delivered") return d.status === "Delivered";
+    return d.status !== "Work Order" && d.status !== "Delivered"; // "open"
   });
   const q = ($("quotesSearch").value || "").toLowerCase().trim();
   const filtered = !q ? byView : byView.filter(d=>{
@@ -2308,7 +2313,7 @@ function renderQuotesTable(list){
 
   listEl.className = quoteViewMode === "open" ? "quotes-list" : "wo-list";
   listEl.innerHTML = "";
-  const viewLabel = quoteViewMode === "open" ? "open" : "other-status";
+  const viewLabel = quoteViewMode === "open" ? "open" : quoteViewMode;
   count.textContent = `${filtered.length} of ${byView.length} ${viewLabel} quotation(s)`;
   if(!filtered.length){
     empty.style.display = "block";
@@ -2316,7 +2321,9 @@ function renderQuotesTable(list){
       ? "No quotations match your search."
       : (quoteViewMode === "open"
           ? "No open quotations yet — save one from the Calculator tab."
-          : "No quotations with another status yet — they'll appear here once linked to a work order or delivered.");
+          : (quoteViewMode === "delivered"
+              ? "No delivered quotations yet."
+              : "No quotations in production yet — they'll appear here once linked to a work order."));
     return;
   }
   empty.style.display = "none";
@@ -2324,6 +2331,9 @@ function renderQuotesTable(list){
   if(quoteViewMode === "open"){
     renderOpenQuoteCards(listEl, filtered);
   } else {
+    // "production" and "delivered" both use the same compact accordion,
+    // with the same locked-status rules applied either way (Print only,
+    // no Load/Delete/Convert — enforced identically for both statuses).
     renderOtherQuoteAccordion(listEl, filtered);
   }
 
