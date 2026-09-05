@@ -657,7 +657,7 @@
     <section class="card panel">
       <div class="card-head"><span class="idx">9</span><h2>Revision &amp; Export</h2></div>
       <div class="card-body">
-        
+       
         <div class="grid cols-2">
           <label class="field"><span class="lab">Revision</span><small>auto — advances only on real edits to a loaded quotation</small><input type="text" id="revisionNo" value="00" readonly></label>
           <label class="field"><span class="lab">Quote No.</span><small>auto — next free number this month</small><input type="text" id="quoteSeq" value="1" readonly></label>
@@ -704,8 +704,8 @@
       <div class="weight-note" id="weightNote"></div>
 
       <div class="btn-row no-print">
-        <button class="action" id="btnPrint" type="button">🖨 Print / Save as PDF</button>
-        <button class="action green" id="btnSaveFb" type="button">☁ Save to DB</button>
+        <button class="action" id="btnPrint" type="button">🖨 Print</button>
+        <button class="action green" id="btnSaveFb" type="button">☁ Save</button>
       </div>
     </div>
   </aside>
@@ -733,7 +733,10 @@
 <main class="quotes-page panel no-print" id="page-workorders" style="display:none;">
   <div class="wo-toolbar-top no-print">
     <h3>Work Orders</h3>
-    <button class="action secondary" id="btnNewWO" type="button">🆕 New Work Order</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="action secondary" id="btnSyncQuoteStatuses" type="button" title="Fixes quotations whose status fell out of sync with their work order's actual completion state">🔄 Sync Quotation Statuses</button>
+      <button class="action secondary" id="btnNewWO" type="button">🆕 New Work Order</button>
+    </div>
   </div>
   <div class="wo-form" id="woFormPanel" style="display:none;">
     <h3 id="woFormTitle">Create Work Order</h3>
@@ -993,6 +996,10 @@ function applyPermissions(){
 
   // "New Work Order" (creating one) belongs to the Finished/New permission.
   if(!woFinishedCanEdit) $("btnNewWO").style.display = "none";
+  // The bulk status-sync writes are covered by either wo_pending:edit
+  // (In Production <-> Production Finished) or wo_finished:edit (anything,
+  // including Delivered) — so show it for either, hide for pure viewers.
+  $("btnSyncQuoteStatuses").style.display = (woPendingCanEdit || woFinishedCanEdit) ? "" : "none";
 
   // Hide whichever Pending/Finished subtab the role can't read, and default
   // to the one it can.
@@ -2728,15 +2735,47 @@ async function persistWoDetails(item, newDetails){
 // done, back to "Work Order" if something gets reopened. Never touches a
 // quote that's already Delivered (that's a manual, final action).
 async function syncQuoteStatusForWorkOrder(item){
-  if(!item.quote_doc_id || item.delivered) return;
+  if(!item.quote_doc_id || item.delivered) return false;
   const targetStatus = isWoFinished(item) ? "Production Finished" : "Work Order";
   try{
     await db.collection(QUOTES_COLLECTION).doc(item.quote_doc_id).update({status: targetStatus});
     quotesCache = null; // Quotations tab should reflect this next time it's opened
+    return true;
   }catch(err){
     console.error("[Quote status sync error]", err);
+    return false;
   }
 }
+
+// One-time / as-needed bulk fixer: re-derives every non-delivered work
+// order's linked quotation status from its actual activity completion.
+// Needed because the automatic sync (above) only fires going forward, when
+// someone finishes/reopens an activity through the UI — it can't reach back
+// and correct work orders that were already completed before this syncing
+// existed, or any quote that fell out of step for some other reason (a
+// failed write, manual data edits, etc.).
+$("btnSyncQuoteStatuses").addEventListener("click", async ()=>{
+  if(!confirm("Re-check every work order and update its linked quotation's status (In Production / Production Finished) to match? This may take a moment for a large number of work orders.")) return;
+  const btn = $("btnSyncQuoteStatuses");
+  btn.disabled = true; btn.textContent = "🔄 Syncing…";
+  try{
+    const snap = await db.collection(WORK_ORDERS_COLLECTION).limit(500).get();
+    let checked = 0, fixed = 0;
+    for(const doc of snap.docs){
+      const item = {id: doc.id, ...doc.data()};
+      if(!item.quote_doc_id || item.delivered) continue;
+      checked++;
+      if(await syncQuoteStatusForWorkOrder(item)) fixed++;
+    }
+    toast(`Checked ${checked} work order(s), updated ${fixed} quotation status(es).`);
+    woCache = null;
+    await loadWorkOrdersPage(true);
+  }catch(err){
+    toast("Sync failed: " + err.message, true);
+  }finally{
+    btn.disabled = false; btn.textContent = "🔄 Sync Quotation Statuses";
+  }
+});
 
 async function markActivityFinished(item, idx){
   const newDetails = item.details.map((d,i)=> i===idx ? {...d, finish_date: new Date().toISOString().slice(0,10)} : d);
