@@ -483,7 +483,7 @@
   <div class="login-card">
     <div class="login-mark">NGK</div>
     <h1>New Golden Key</h1>
-    <p class="login-sub">Sign in to the pricing tool</p>
+    <p class="login-sub">Sign in</p>
     <form id="loginForm">
       <label class="field"><span class="lab">Email</span><input type="email" id="loginEmail" autocomplete="username" required></label>
       <label class="field" style="margin-top:10px;"><span class="lab">Password</span><input type="password" id="loginPassword" autocomplete="current-password" required></label>
@@ -657,10 +657,7 @@
     <section class="card panel">
       <div class="card-head"><span class="idx">9</span><h2>Revision &amp; Export</h2></div>
       <div class="card-body">
-        <div class="workflow-box" id="workflowBox">📋 WORKFLOW:
-• New quotation — fill in the form and click "Save to Firebase". The reference (Q1/ht/mm/yyyy) is generated automatically: the number after "Q" is the next free number for this month, the letters are from the Item Type, and Rev starts at 00.
-• Editing a quotation — open it from the Quotations tab, then change anything here. The reference stays the same, and the revision only advances (Rev 01, Rev 02, …) if something actually changed since it was loaded.
-• Click "Start New Quotation" below to detach from the loaded quotation and begin a fresh one.</div>
+        
         <div class="grid cols-2">
           <label class="field"><span class="lab">Revision</span><small>auto — advances only on real edits to a loaded quotation</small><input type="text" id="revisionNo" value="00" readonly></label>
           <label class="field"><span class="lab">Quote No.</span><small>auto — next free number this month</small><input type="text" id="quoteSeq" value="1" readonly></label>
@@ -708,7 +705,7 @@
 
       <div class="btn-row no-print">
         <button class="action" id="btnPrint" type="button">🖨 Print / Save as PDF</button>
-        <button class="action green" id="btnSaveFb" type="button">☁ Save to Firebase</button>
+        <button class="action green" id="btnSaveFb" type="button">☁ Save to DB</button>
       </div>
     </div>
   </aside>
@@ -719,6 +716,7 @@
   <div class="wo-subtabs no-print" id="quoteViewSubtabs">
     <button class="subtab active" data-quote-view="open" type="button">🆕 New / Open</button>
     <button class="subtab" data-quote-view="production" type="button">🚧 In Production</button>
+    <button class="subtab" data-quote-view="finished" type="button">✅ Production Finished</button>
     <button class="subtab" data-quote-view="delivered" type="button">📦 Delivered</button>
   </div>
   <div class="quotes-toolbar">
@@ -875,6 +873,18 @@ function emptyPermissions(){
   const p = {};
   PAGE_KEYS.forEach(k=> p[k] = {read:false, edit:false});
   return p;
+}
+
+// A quotation is "locked" (frozen from ordinary editing/deleting) once it's
+// linked to a work order, in any of its three states — in production, all
+// activities finished but not yet delivered, or delivered.
+const LOCKED_QUOTE_STATUSES = ["Work Order", "Production Finished", "Delivered"];
+function isQuoteLocked(status){ return LOCKED_QUOTE_STATUSES.includes(status); }
+function quoteStatusReason(status){
+  if(status === "Delivered") return "delivered";
+  if(status === "Production Finished") return "production finished, awaiting delivery";
+  if(status === "Work Order") return "linked to a work order";
+  return "locked";
 }
 
 let currentUser = null;
@@ -1691,9 +1701,8 @@ function renderCostTable(c){
 
   const statusEl = $("loadedStatus");
   const saveBtn = $("btnSaveFb");
-  if(currentQuoteId && (loadedQuoteStatus === "Work Order" || loadedQuoteStatus === "Delivered")){
-    const reason = loadedQuoteStatus === "Delivered" ? "delivered" : "linked to a work order";
-    statusEl.innerHTML = `<span class="locked-note">🔒 ${loadedQuotationNo} is ${reason} and is read-only — changes here can't be saved.</span>`;
+  if(currentQuoteId && isQuoteLocked(loadedQuoteStatus)){
+    statusEl.innerHTML = `<span class="locked-note">🔒 ${loadedQuotationNo} is ${quoteStatusReason(loadedQuoteStatus)} and is read-only — changes here can't be saved.</span>`;
     saveBtn.disabled = true;
   } else if(currentQuoteId){
     statusEl.textContent = isDirty
@@ -1886,7 +1895,7 @@ function buildJsonData(c){
 $("btnSaveFb").addEventListener("click", async ()=>{
   let c = compute();
 
-  if(currentQuoteId && (loadedQuoteStatus === "Work Order" || loadedQuoteStatus === "Delivered")){
+  if(currentQuoteId && isQuoteLocked(loadedQuoteStatus)){
     toast("This quotation is locked and can no longer be edited or saved.", true);
     return;
   }
@@ -2059,9 +2068,8 @@ function applyLoadedData(data){
 
   update();
   renderAttachControls();
-  if(loadedQuoteStatus === "Work Order" || loadedQuoteStatus === "Delivered"){
-    const reason = loadedQuoteStatus === "Delivered" ? "delivered" : "linked to a work order";
-    toast(`Loaded ${loadedQuotationNo} — this quotation is ${reason} and is read-only.`, true);
+  if(isQuoteLocked(loadedQuoteStatus)){
+    toast(`Loaded ${loadedQuotationNo} — this quotation is ${quoteStatusReason(loadedQuoteStatus)} and is read-only.`, true);
   } else {
     toast(`Loaded ${loadedQuotationNo} — currently Rev ${padRev(loadedRevision)}. Editing will advance to Rev ${padRev(loadedRevision+1)}.`);
   }
@@ -2126,7 +2134,8 @@ function quoteSavedDate(d){
 
 function quoteStatusBadge(d){
   if(d.status === "Delivered") return `<span class="badge locked">📦 Delivered</span>`;
-  if(d.status === "Work Order") return `<span class="badge locked">🔒 Work Order</span>`;
+  if(d.status === "Production Finished") return `<span class="badge locked">✅ Production Finished</span>`;
+  if(d.status === "Work Order") return `<span class="badge locked">🚧 In Production</span>`;
   return `<span class="badge open">Open</span>`;
 }
 
@@ -2303,8 +2312,9 @@ function renderQuotesTable(list){
 
   const byView = list.filter(d => {
     if(quoteViewMode === "production") return d.status === "Work Order";
+    if(quoteViewMode === "finished") return d.status === "Production Finished";
     if(quoteViewMode === "delivered") return d.status === "Delivered";
-    return d.status !== "Work Order" && d.status !== "Delivered"; // "open"
+    return !isQuoteLocked(d.status); // "open"
   });
   const q = ($("quotesSearch").value || "").toLowerCase().trim();
   const filtered = !q ? byView : byView.filter(d=>{
@@ -2317,13 +2327,13 @@ function renderQuotesTable(list){
   count.textContent = `${filtered.length} of ${byView.length} ${viewLabel} quotation(s)`;
   if(!filtered.length){
     empty.style.display = "block";
-    empty.textContent = q
-      ? "No quotations match your search."
-      : (quoteViewMode === "open"
-          ? "No open quotations yet — save one from the Calculator tab."
-          : (quoteViewMode === "delivered"
-              ? "No delivered quotations yet."
-              : "No quotations in production yet — they'll appear here once linked to a work order."));
+    const emptyMessages = {
+      open: "No open quotations yet — save one from the Calculator tab.",
+      production: "No quotations in production yet — they'll appear here once linked to a work order.",
+      finished: "No quotations with production finished yet — they'll appear here once every work order activity is done.",
+      delivered: "No delivered quotations yet.",
+    };
+    empty.textContent = q ? "No quotations match your search." : emptyMessages[quoteViewMode];
     return;
   }
   empty.style.display = "none";
@@ -2341,7 +2351,7 @@ function renderQuotesTable(list){
     btn.addEventListener("click", async ()=>{
       const item = quotesCache.find(d=>d.id === btn.dataset.id);
       if(!item) return;
-      if(item.status === "Work Order" || item.status === "Delivered"){ toast("This quotation is locked and can no longer be edited.", true); return; }
+      if(isQuoteLocked(item.status)){ toast("This quotation is locked and can no longer be edited.", true); return; }
       applyLoadedData(item);
       document.querySelector('nav.pagenav .tab[data-page="calc"]').click();
       window.scrollTo({top:0, behavior:"smooth"});
@@ -2365,7 +2375,7 @@ function renderQuotesTable(list){
     btn.addEventListener("click", async ()=>{
       const item = quotesCache.find(d=>d.id === btn.dataset.id);
       if(!item) return;
-      if(item.status === "Work Order" || item.status === "Delivered"){ toast("This quotation is locked and can no longer be deleted.", true); return; }
+      if(isQuoteLocked(item.status)){ toast("This quotation is locked and can no longer be deleted.", true); return; }
       if(!confirm(`Delete quotation ${item.quotation_no || item.id}? This cannot be undone.`)) return;
       try{
         await db.collection(QUOTES_COLLECTION).doc(item.id).delete();
@@ -2419,7 +2429,7 @@ $("quotesSearch").addEventListener("input", ()=>{ if(quotesCache) renderQuotesTa
 
 // ================= WORK ORDERS PAGE =================
 let woCache = null;          // cached list of saved work orders
-let openQuotesCache = null;  // cached list of quotations available to link (status !== "Work Order")
+let openQuotesCache = null;  // cached list of quotations available to link (excludes any locked status)
 let woDetails = [{activity:"", work_done:"", finish_date:""}];
 let currentWoId = null;      // set while editing an existing work order
 let currentWoQuote = null;   // {id, quotation_no, client_name} of the linked quotation
@@ -2491,7 +2501,7 @@ async function refreshOpenQuotesForLinking(){
     openQuotesCache = [];
     snap.forEach(doc=>{
       const d = doc.data();
-      if(d.status !== "Work Order") openQuotesCache.push({id: doc.id, ...d});
+      if(!isQuoteLocked(d.status)) openQuotesCache.push({id: doc.id, ...d});
     });
     sel.innerHTML = '<option value="">— select a saved quotation —</option>';
     // While editing an existing WO, keep its linked quotation selectable even
@@ -2600,8 +2610,11 @@ $("btnSaveWO").addEventListener("click", async ()=>{
     if(wasNew) data._created_at_ts = firebase.firestore.FieldValue.serverTimestamp();
     await docRef.set(data, {merge:true});
 
-    // Lock the linked quotation so it can no longer be edited or deleted.
-    await db.collection(QUOTES_COLLECTION).doc(quoteId).update({status: "Work Order"});
+    // Lock the linked quotation, reflecting whether every activity in this
+    // save is already finished (e.g. editing a fully-done order without
+    // reopening anything shouldn't reset it back to "in production").
+    const allDone = filledDetails.length > 0 && filledDetails.every(d => !!d.finish_date);
+    await db.collection(QUOTES_COLLECTION).doc(quoteId).update({status: allDone ? "Production Finished" : "Work Order"});
     quotesCache = null; // Quotations tab should reflect the lock next time it's opened
 
     toast(wasNew ? "Work order created." : "Work order saved.");
@@ -2710,11 +2723,27 @@ async function persistWoDetails(item, newDetails){
   }
 }
 
+// Keeps the linked quotation's status in step with whether every activity
+// in this work order is finished — "Production Finished" once everything's
+// done, back to "Work Order" if something gets reopened. Never touches a
+// quote that's already Delivered (that's a manual, final action).
+async function syncQuoteStatusForWorkOrder(item){
+  if(!item.quote_doc_id || item.delivered) return;
+  const targetStatus = isWoFinished(item) ? "Production Finished" : "Work Order";
+  try{
+    await db.collection(QUOTES_COLLECTION).doc(item.quote_doc_id).update({status: targetStatus});
+    quotesCache = null; // Quotations tab should reflect this next time it's opened
+  }catch(err){
+    console.error("[Quote status sync error]", err);
+  }
+}
+
 async function markActivityFinished(item, idx){
   const newDetails = item.details.map((d,i)=> i===idx ? {...d, finish_date: new Date().toISOString().slice(0,10)} : d);
   if(await persistWoDetails(item, newDetails)){
     toast("Activity marked finished.");
     if(isWoFinished(item)) expandedWoId = null; // whole order just left the Pending tab
+    await syncQuoteStatusForWorkOrder(item);
     renderWoTable(woCache);
   }
 }
@@ -2724,6 +2753,7 @@ async function unfinishActivity(item, idx){
   if(await persistWoDetails(item, newDetails)){
     toast("Activity reopened.");
     expandedWoId = null; // order just left the Finished tab
+    await syncQuoteStatusForWorkOrder(item);
     renderWoTable(woCache);
   }
 }
